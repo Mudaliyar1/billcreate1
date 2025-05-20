@@ -33,6 +33,12 @@ A comprehensive bill creation and management system for Kushi Trader.
   - View all bills
   - Download bills as PDF
   - Search bills
+  - Email bills to customers
+
+- **Email Functionality**
+  - Send bills to customers via email
+  - Professional email templates
+  - PDF bill attachments
 
 ## Tech Stack
 
@@ -40,6 +46,7 @@ A comprehensive bill creation and management system for Kushi Trader.
 - **Backend**: Node.js, Express
 - **Database**: MongoDB Atlas
 - **PDF Generation**: PDFKit
+- **Email Service**: Brevo (formerly Sendinblue)
 
 ## Installation
 
@@ -61,9 +68,12 @@ A comprehensive bill creation and management system for Kushi Trader.
    MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/<database-name>?retryWrites=true&w=majority
    JWT_SECRET=<strong-random-string>
    SESSION_SECRET=<different-strong-random-string>
+   BREVO_API_KEY=<your-brevo-api-key>
    ```
 
-   Note: For production, set `NODE_ENV=production`
+   Note:
+   - For production, set `NODE_ENV=production`
+   - The BREVO_API_KEY is required for email functionality. You can get an API key by signing up at [Brevo](https://www.brevo.com/)
 
 4. Create an admin user:
    ```

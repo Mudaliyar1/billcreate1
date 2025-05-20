@@ -42,6 +42,12 @@ const hasValidMXRecords = async (email) => {
 const configureClient = () => {
   const defaultClient = SibApiV3Sdk.ApiClient.instance;
   const apiKey = defaultClient.authentications['api-key'];
+
+  // Check if API key is available
+  if (!process.env.BREVO_API_KEY) {
+    console.warn('BREVO_API_KEY is not set in environment variables. Email functionality will not work.');
+  }
+
   apiKey.apiKey = process.env.BREVO_API_KEY;
   return defaultClient;
 };
@@ -71,6 +77,15 @@ const sendBillEmail = async (bill, pdfPath) => {
     if (!hasMXRecords) {
       console.log(`Warning: No valid MX records for domain in email: ${bill.customer.email}`);
       // We'll still try to send the email, but log the warning
+    }
+
+    // Check if Brevo API key is set
+    if (!process.env.BREVO_API_KEY) {
+      console.error('BREVO_API_KEY is not set. Cannot send email.');
+      return {
+        success: false,
+        message: 'Email service not configured. BREVO_API_KEY is missing.'
+      };
     }
 
     // Configure API client
