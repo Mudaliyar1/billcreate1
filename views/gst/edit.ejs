@@ -1,0 +1,74 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/gst' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Edit GST Rate</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <a href="/gst" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to GST Rates
+          </a>
+        </div>
+      </div>
+
+      <%- include('../partials/messages') %>
+
+      <div class="row mb-4">
+        <div class="col-md-8 mx-auto">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title mb-0">Edit GST Rate Information</h5>
+            </div>
+            <div class="card-body">
+              <form action="/gst/<%= gstRate._id %>/edit" method="POST">
+                <div class="mb-3">
+                  <label for="type" class="form-label">GST Type</label>
+                  <input type="text" class="form-control" id="type" value="<%= gstRate.type %>" readonly>
+                  <div class="form-text">
+                    GST type cannot be changed after creation.
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label for="percentage" class="form-label">Percentage (%)</label>
+                  <input type="number" class="form-control" id="percentage" name="percentage" min="0" max="100" step="0.01" value="<%= gstRate.percentage %>" required>
+                  <div class="form-text">
+                    Enter the GST percentage rate (e.g., 5, 12, 18, 28).
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label for="description" class="form-label">Description</label>
+                  <input type="text" class="form-control" id="description" name="description" value="<%= gstRate.description %>" required>
+                  <div class="form-text">
+                    Enter a description for this GST rate (e.g., "Standard Rate", "Reduced Rate").
+                  </div>
+                </div>
+
+                <div class="mb-3 form-check">
+                  <input type="checkbox" class="form-check-input" id="isDefault" name="isDefault" <%= gstRate.isDefault ? 'checked' : '' %>>
+                  <label class="form-check-label" for="isDefault">Set as Default</label>
+                  <div class="form-text">
+                    If checked, this GST rate will be selected by default when creating bills.
+                  </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                  <button type="submit" class="btn btn-primary">Update GST Rate</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

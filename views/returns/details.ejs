@@ -1,0 +1,121 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/returns' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Return Bill Details</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <a href="/returns/<%= returnBill._id %>/edit" class="btn btn-sm btn-outline-warning me-2">
+            <i class="fas fa-edit"></i> Edit
+          </a>
+          <a href="/returns/<%= returnBill._id %>/download" class="btn btn-sm btn-outline-primary me-2">
+            <i class="fas fa-download"></i> Download PDF
+          </a>
+          <a href="/returns/<%= returnBill._id %>/delete" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this return bill? This action cannot be undone.');">
+            <i class="fas fa-trash"></i> Delete
+          </a>
+        </div>
+      </div>
+
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title">Return Bill #<%= returnBill.returnNumber %></h5>
+            </div>
+            <div class="card-body">
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <h6 class="fw-bold">Customer Information</h6>
+                  <p><strong>Name:</strong> <%= returnBill.customer.name %></p>
+                  <p><strong>Phone:</strong> <%= returnBill.customer.phone %></p>
+                  <p><strong>Place:</strong> <%= returnBill.customer.place %></p>
+                </div>
+                <div class="col-md-6">
+                  <h6 class="fw-bold">Return Details</h6>
+                  <p><strong>Return Number:</strong> <%= returnBill.returnNumber %></p>
+                  <p><strong>Date:</strong> <%= new Date(returnBill.createdAt).toLocaleDateString() %> <%= new Date(returnBill.createdAt).toLocaleTimeString() %></p>
+                  <p><strong>Reason:</strong> <%= returnBill.reason %></p>
+                  <p><strong>Picked By:</strong> <%= returnBill.pickedBy %></p>
+                  <p>
+                    <strong>Status:</strong>
+                    <% if (returnBill.status === 'Pending') { %>
+                      <span class="badge bg-warning">Pending</span>
+                    <% } else { %>
+                      <span class="badge bg-success">Resolved</span>
+                    <% } %>
+                  </p>
+                  <% if (returnBill.status === 'Resolved') { %>
+                    <p><strong>Resolution:</strong> <%= returnBill.resolution || 'N/A' %></p>
+                    <% if (returnBill.resolvedAt) { %>
+                      <p><strong>Resolved On:</strong> <%= new Date(returnBill.resolvedAt).toLocaleDateString() %></p>
+                    <% } %>
+                    <% if (returnBill.resolutionNotes) { %>
+                      <p><strong>Notes:</strong> <%= returnBill.resolutionNotes %></p>
+                    <% } %>
+                  <% } %>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-12">
+                  <h6 class="fw-bold">Returned Products</h6>
+                  <div class="table-responsive">
+                    <table class="table table-striped">
+                      <thead>
+                        <tr>
+                          <th>Product</th>
+                          <th>Category</th>
+                          <th>Price</th>
+                          <th>Quantity</th>
+                          <th>Original Bill</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% returnBill.items.forEach(item => { %>
+                          <tr>
+                            <td><%= item.name %></td>
+                            <td><%= item.category %></td>
+                            <td>₹<%= item.price.toFixed(2) %></td>
+                            <td><%= item.quantity %></td>
+                            <td>
+                              <% if (item.originalBillNumber) { %>
+                                <a href="/bills/<%= item.originalBill %>" class="text-primary">
+                                  <%= item.originalBillNumber %>
+                                </a>
+                              <% } else { %>
+                                <span class="text-muted">N/A</span>
+                              <% } %>
+                            </td>
+                          </tr>
+                        <% }) %>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <% if (returnBill.status === 'Pending') { %>
+                <div class="row mt-4">
+                  <div class="col-md-12">
+                    <a href="/returns/<%= returnBill._id %>/edit" class="btn btn-warning">
+                      <i class="fas fa-check-circle"></i> Resolve Return
+                    </a>
+                  </div>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,430 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/returns/statistics' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Return Statistics</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="thisMonth">This Month</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="lastMonth">Last Month</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="thisYear">This Year</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="allTime">All Time</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="row mb-4">
+        <div class="col-md-3 mb-4">
+          <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+              <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                  <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                    Total Returns</div>
+                  <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalReturns"><%= stats.totalReturns %></div>
+                </div>
+                <div class="col-auto">
+                  <i class="fas fa-undo-alt fa-2x text-gray-300"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+          <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+              <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                  <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                    Pending Returns</div>
+                  <div class="h5 mb-0 font-weight-bold text-gray-800" id="pendingReturns"><%= stats.pendingReturns %></div>
+                </div>
+                <div class="col-auto">
+                  <i class="fas fa-clock fa-2x text-gray-300"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+          <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+              <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                  <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                    Resolved Returns</div>
+                  <div class="h5 mb-0 font-weight-bold text-gray-800" id="resolvedReturns"><%= stats.resolvedReturns %></div>
+                </div>
+                <div class="col-auto">
+                  <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+          <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+              <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                  <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                    Resolution Rate</div>
+                  <div class="row no-gutters align-items-center">
+                    <div class="col-auto">
+                      <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800" id="resolutionRate"><%= stats.resolutionRate %>%</div>
+                    </div>
+                    <div class="col">
+                      <div class="progress progress-sm mr-2">
+                        <div class="progress-bar bg-info" role="progressbar" style="width: <%= stats.resolutionRate %>%" 
+                          aria-valuenow="<%= stats.resolutionRate %>" aria-valuemin="0" aria-valuemax="100"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <i class="fas fa-percentage fa-2x text-gray-300"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resolution Types Chart -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card shadow mb-4">
+            <div class="card-header py-3">
+              <h6 class="m-0 font-weight-bold text-primary">Resolution Types</h6>
+            </div>
+            <div class="card-body">
+              <div class="chart-pie pt-4 pb-2">
+                <canvas id="resolutionTypesChart"></canvas>
+              </div>
+              <div class="mt-4 text-center small">
+                <span class="mr-2">
+                  <i class="fas fa-circle text-success"></i> Re-added to Inventory
+                </span>
+                <span class="mr-2">
+                  <i class="fas fa-circle text-danger"></i> Damaged
+                </span>
+                <span class="mr-2">
+                  <i class="fas fa-circle text-warning"></i> Replaced
+                </span>
+                <span class="mr-2">
+                  <i class="fas fa-circle text-info"></i> Refunded
+                </span>
+                <span class="mr-2">
+                  <i class="fas fa-circle text-secondary"></i> Other
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card shadow mb-4">
+            <div class="card-header py-3">
+              <h6 class="m-0 font-weight-bold text-primary">Returns by Category</h6>
+            </div>
+            <div class="card-body">
+              <div class="chart-pie pt-4 pb-2">
+                <canvas id="categoryChart"></canvas>
+              </div>
+              <div class="mt-4 text-center small">
+                <% stats.categoryCounts.forEach((category, index) => { %>
+                  <span class="mr-2">
+                    <i class="fas fa-circle" style="color: <%= ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'][index % 5] %>;"></i> <%= category._id %>
+                  </span>
+                <% }) %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Monthly Returns Chart -->
+      <div class="row">
+        <div class="col-md-12">
+          <div class="card shadow mb-4">
+            <div class="card-header py-3">
+              <h6 class="m-0 font-weight-bold text-primary">Monthly Returns</h6>
+            </div>
+            <div class="card-body">
+              <div class="chart-area">
+                <canvas id="monthlyReturnsChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Returned Products -->
+      <div class="row">
+        <div class="col-md-12">
+          <div class="card shadow mb-4">
+            <div class="card-header py-3">
+              <h6 class="m-0 font-weight-bold text-primary">Top Returned Products</h6>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-bordered" id="topReturnedProducts" width="100%" cellspacing="0">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Category</th>
+                      <th>Return Count</th>
+                      <th>Total Quantity</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% stats.topReturnedProducts.forEach(product => { %>
+                      <tr>
+                        <td><%= product._id.name %></td>
+                        <td><%= product._id.category %></td>
+                        <td><%= product.count %></td>
+                        <td><%= product.totalQuantity %></td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Resolution Types Chart
+    const resolutionTypesCtx = document.getElementById('resolutionTypesChart').getContext('2d');
+    const resolutionTypesChart = new Chart(resolutionTypesCtx, {
+      type: 'doughnut',
+      data: {
+        labels: <%- JSON.stringify(stats.resolutionTypes.map(r => r._id || 'Pending')) %>,
+        datasets: [{
+          data: <%- JSON.stringify(stats.resolutionTypes.map(r => r.count)) %>,
+          backgroundColor: ['#1cc88a', '#e74a3b', '#f6c23e', '#36b9cc', '#858796'],
+          hoverBackgroundColor: ['#17a673', '#be2617', '#dda20a', '#2c9faf', '#6e707e'],
+          hoverBorderColor: "rgba(234, 236, 244, 1)",
+        }],
+      },
+      options: {
+        maintainAspectRatio: false,
+        tooltips: {
+          backgroundColor: "rgb(255,255,255)",
+          bodyFontColor: "#858796",
+          borderColor: '#dddfeb',
+          borderWidth: 1,
+          xPadding: 15,
+          yPadding: 15,
+          displayColors: false,
+          caretPadding: 10,
+        },
+        legend: {
+          display: false
+        },
+        cutoutPercentage: 80,
+      },
+    });
+
+    // Category Chart
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+    const categoryChart = new Chart(categoryCtx, {
+      type: 'doughnut',
+      data: {
+        labels: <%- JSON.stringify(stats.categoryCounts.map(c => c._id)) %>,
+        datasets: [{
+          data: <%- JSON.stringify(stats.categoryCounts.map(c => c.count)) %>,
+          backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'],
+          hoverBackgroundColor: ['#2e59d9', '#17a673', '#2c9faf', '#dda20a', '#be2617'],
+          hoverBorderColor: "rgba(234, 236, 244, 1)",
+        }],
+      },
+      options: {
+        maintainAspectRatio: false,
+        tooltips: {
+          backgroundColor: "rgb(255,255,255)",
+          bodyFontColor: "#858796",
+          borderColor: '#dddfeb',
+          borderWidth: 1,
+          xPadding: 15,
+          yPadding: 15,
+          displayColors: false,
+          caretPadding: 10,
+        },
+        legend: {
+          display: false
+        },
+        cutoutPercentage: 80,
+      },
+    });
+
+    // Monthly Returns Chart
+    const monthlyReturnsCtx = document.getElementById('monthlyReturnsChart').getContext('2d');
+    const monthlyReturnsChart = new Chart(monthlyReturnsCtx, {
+      type: 'line',
+      data: {
+        labels: <%- JSON.stringify(stats.monthlyReturns.map(m => m._id)) %>,
+        datasets: [{
+          label: "Returns",
+          lineTension: 0.3,
+          backgroundColor: "rgba(78, 115, 223, 0.05)",
+          borderColor: "rgba(78, 115, 223, 1)",
+          pointRadius: 3,
+          pointBackgroundColor: "rgba(78, 115, 223, 1)",
+          pointBorderColor: "rgba(78, 115, 223, 1)",
+          pointHoverRadius: 3,
+          pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
+          pointHoverBorderColor: "rgba(78, 115, 223, 1)",
+          pointHitRadius: 10,
+          pointBorderWidth: 2,
+          data: <%- JSON.stringify(stats.monthlyReturns.map(m => m.count)) %>,
+        }],
+      },
+      options: {
+        maintainAspectRatio: false,
+        layout: {
+          padding: {
+            left: 10,
+            right: 25,
+            top: 25,
+            bottom: 0
+          }
+        },
+        scales: {
+          xAxes: [{
+            time: {
+              unit: 'month'
+            },
+            gridLines: {
+              display: false,
+              drawBorder: false
+            },
+            ticks: {
+              maxTicksLimit: 7
+            }
+          }],
+          yAxes: [{
+            ticks: {
+              maxTicksLimit: 5,
+              padding: 10,
+              beginAtZero: true
+            },
+            gridLines: {
+              color: "rgb(234, 236, 244)",
+              zeroLineColor: "rgb(234, 236, 244)",
+              drawBorder: false,
+              borderDash: [2],
+              zeroLineBorderDash: [2]
+            }
+          }],
+        },
+        legend: {
+          display: false
+        },
+        tooltips: {
+          backgroundColor: "rgb(255,255,255)",
+          bodyFontColor: "#858796",
+          titleMarginBottom: 10,
+          titleFontColor: '#6e707e',
+          titleFontSize: 14,
+          borderColor: '#dddfeb',
+          borderWidth: 1,
+          xPadding: 15,
+          yPadding: 15,
+          displayColors: false,
+          intersect: false,
+          mode: 'index',
+          caretPadding: 10,
+        }
+      }
+    });
+
+    // Filter buttons
+    document.getElementById('thisMonth').addEventListener('click', function() {
+      fetchStatistics('thisMonth');
+    });
+
+    document.getElementById('lastMonth').addEventListener('click', function() {
+      fetchStatistics('lastMonth');
+    });
+
+    document.getElementById('thisYear').addEventListener('click', function() {
+      fetchStatistics('thisYear');
+    });
+
+    document.getElementById('allTime').addEventListener('click', function() {
+      fetchStatistics('allTime');
+    });
+
+    // Function to fetch statistics
+    async function fetchStatistics(period) {
+      try {
+        const response = await fetch(`/returns/statistics/api?period=${period}`);
+        const stats = await response.json();
+
+        // Update summary cards
+        document.getElementById('totalReturns').textContent = stats.totalReturns;
+        document.getElementById('pendingReturns').textContent = stats.pendingReturns;
+        document.getElementById('resolvedReturns').textContent = stats.resolvedReturns;
+        document.getElementById('resolutionRate').textContent = stats.resolutionRate + '%';
+        
+        // Update progress bar
+        document.querySelector('.progress-bar').style.width = stats.resolutionRate + '%';
+        document.querySelector('.progress-bar').setAttribute('aria-valuenow', stats.resolutionRate);
+
+        // Update resolution types chart
+        resolutionTypesChart.data.labels = stats.resolutionTypes.map(r => r._id || 'Pending');
+        resolutionTypesChart.data.datasets[0].data = stats.resolutionTypes.map(r => r.count);
+        resolutionTypesChart.update();
+
+        // Update category chart
+        categoryChart.data.labels = stats.categoryCounts.map(c => c._id);
+        categoryChart.data.datasets[0].data = stats.categoryCounts.map(c => c.count);
+        categoryChart.update();
+
+        // Update monthly returns chart
+        monthlyReturnsChart.data.labels = stats.monthlyReturns.map(m => m._id);
+        monthlyReturnsChart.data.datasets[0].data = stats.monthlyReturns.map(m => m.count);
+        monthlyReturnsChart.update();
+
+        // Update top returned products table
+        const tableBody = document.querySelector('#topReturnedProducts tbody');
+        tableBody.innerHTML = '';
+        
+        stats.topReturnedProducts.forEach(product => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${product._id.name}</td>
+            <td>${product._id.category}</td>
+            <td>${product.count}</td>
+            <td>${product.totalQuantity}</td>
+          `;
+          tableBody.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error fetching statistics:', error);
+      }
+    }
+  });
+</script>
+
+<%- include('../partials/footer') %>

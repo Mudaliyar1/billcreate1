@@ -1,0 +1,147 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/products' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Products</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <a href="/products/add" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-plus"></i> Add Product
+          </a>
+        </div>
+      </div>
+
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header">
+              <ul class="nav nav-tabs card-header-tabs" id="productTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab" aria-controls="all" aria-selected="true">All</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="board-tab" data-bs-toggle="tab" data-bs-target="#board" type="button" role="tab" aria-controls="board" aria-selected="false">Board</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="chanel-tab" data-bs-toggle="tab" data-bs-target="#chanel" type="button" role="tab" aria-controls="chanel" aria-selected="false">Chanel</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="hardware-tab" data-bs-toggle="tab" data-bs-target="#hardware" type="button" role="tab" aria-controls="hardware" aria-selected="false">Hardware</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="bori-tab" data-bs-toggle="tab" data-bs-target="#bori" type="button" role="tab" aria-controls="bori" aria-selected="false">Bori</button>
+                </li>
+              </ul>
+            </div>
+            <div class="card-body">
+              <div class="tab-content" id="productTabsContent">
+                <div class="tab-pane fade show active" id="all" role="tabpanel" aria-labelledby="all-tab">
+                  <% if (products && products.length > 0) { %>
+                    <div class="table-responsive">
+                      <table class="table table-striped table-hover">
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <% products.forEach(product => { %>
+                            <tr>
+                              <td><%= product.name %></td>
+                              <td><span class="badge bg-<%= product.category === 'Board' ? 'primary' : product.category === 'Chanel' ? 'success' : product.category === 'Hardware' ? 'warning' : 'danger' %>"><%= product.category %></span></td>
+                              <td>₹<%= product.price.toFixed(2) %></td>
+                              <td>
+                                <span class="<%= (product.quantity || 0) <= 5 ? 'text-danger fw-bold' : '' %>">
+                                  <%= product.quantity || 0 %>
+                                </span>
+                                <% if ((product.quantity || 0) <= 5) { %>
+                                  <span class="badge bg-danger">Low Stock</span>
+                                <% } %>
+                              </td>
+                              <td>
+                                <a href="/products/edit/<%= product._id %>" class="btn btn-sm btn-outline-primary">
+                                  <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="/products/delete/<%= product._id %>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this product?')">
+                                  <i class="fas fa-trash"></i>
+                                </a>
+                              </td>
+                            </tr>
+                          <% }) %>
+                        </tbody>
+                      </table>
+                    </div>
+                  <% } else { %>
+                    <div class="alert alert-info">
+                      No products found. <a href="/products/add">Add a product</a>
+                    </div>
+                  <% } %>
+                </div>
+
+                <% ['Board', 'Chanel', 'Hardware', 'Bori'].forEach(category => { %>
+                  <div class="tab-pane fade" id="<%= category.toLowerCase() %>" role="tabpanel" aria-labelledby="<%= category.toLowerCase() %>-tab">
+                    <% const categoryProducts = products.filter(p => p.category === category); %>
+                    <% if (categoryProducts && categoryProducts.length > 0) { %>
+                      <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Price</th>
+                              <th>Quantity</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <% categoryProducts.forEach(product => { %>
+                              <tr>
+                                <td><%= product.name %></td>
+                                <td>₹<%= product.price.toFixed(2) %></td>
+                                <td>
+                                  <span class="<%= (product.quantity || 0) <= 5 ? 'text-danger fw-bold' : '' %>">
+                                    <%= product.quantity || 0 %>
+                                  </span>
+                                  <% if ((product.quantity || 0) <= 5) { %>
+                                    <span class="badge bg-danger">Low Stock</span>
+                                  <% } %>
+                                </td>
+                                <td>
+                                  <a href="/products/edit/<%= product._id %>" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                  </a>
+                                  <a href="/products/delete/<%= product._id %>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this product?')">
+                                    <i class="fas fa-trash"></i>
+                                  </a>
+                                </td>
+                              </tr>
+                            <% }) %>
+                          </tbody>
+                        </table>
+                      </div>
+                    <% } else { %>
+                      <div class="alert alert-info">
+                        No <%= category %> products found. <a href="/products/add">Add a product</a>
+                      </div>
+                    <% } %>
+                  </div>
+                <% }) %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

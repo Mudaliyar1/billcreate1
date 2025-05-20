@@ -1,0 +1,173 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/returns' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Edit Return Bill</h1>
+      </div>
+
+      <div class="row">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title">Return Bill #<%= returnBill.returnNumber %></h5>
+            </div>
+            <div class="card-body">
+              <form action="/returns/<%= returnBill._id %>/edit" method="POST" id="editReturnForm">
+                <!-- Customer Information -->
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5 class="border-bottom pb-2">Customer Information</h5>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="customerName" class="form-label">Customer Name</label>
+                    <input type="text" class="form-control" id="customerName" name="customerName" value="<%= returnBill.customer.name %>" required>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="customerPhone" class="form-label">Phone Number</label>
+                    <input type="text" class="form-control" id="customerPhone" name="customerPhone" value="<%= returnBill.customer.phone %>" required>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="customerPlace" class="form-label">Place</label>
+                    <input type="text" class="form-control" id="customerPlace" name="customerPlace" value="<%= returnBill.customer.place %>" required>
+                  </div>
+                </div>
+
+                <!-- Return Details -->
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5 class="border-bottom pb-2">Return Details</h5>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="reason" class="form-label">Return Reason</label>
+                    <input type="text" class="form-control" id="reason" name="reason" value="<%= returnBill.reason %>" required>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="pickedBy" class="form-label">Picked By</label>
+                    <input type="text" class="form-control" id="pickedBy" name="pickedBy" value="<%= returnBill.pickedBy %>" required>
+                  </div>
+                </div>
+
+                <!-- Products -->
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5 class="border-bottom pb-2">Returned Products</h5>
+                  </div>
+                  <div class="col-md-12">
+                    <div class="table-responsive">
+                      <table class="table table-striped">
+                        <thead>
+                          <tr>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Quantity</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <% returnBill.items.forEach(item => { %>
+                            <tr>
+                              <td><%= item.name %></td>
+                              <td><%= item.category %></td>
+                              <td><%= item.quantity %></td>
+                            </tr>
+                          <% }) %>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Resolution Section -->
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5 class="border-bottom pb-2">Resolution</h5>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select" id="status" name="status" required>
+                      <option value="Pending" <%= returnBill.status === 'Pending' ? 'selected' : '' %>>Pending</option>
+                      <option value="Resolved" <%= returnBill.status === 'Resolved' ? 'selected' : '' %>>Resolved</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6 mb-3 resolution-field" style="<%= returnBill.status === 'Pending' ? 'display: none;' : '' %>">
+                    <label for="resolution" class="form-label">Resolution Type</label>
+                    <select class="form-select" id="resolution" name="resolution">
+                      <option value="">Select Resolution</option>
+                      <option value="Re-added to Inventory" <%= returnBill.resolution === 'Re-added to Inventory' ? 'selected' : '' %>>Re-added to Inventory</option>
+                      <option value="Damaged" <%= returnBill.resolution === 'Damaged' ? 'selected' : '' %>>Damaged</option>
+                      <option value="Replaced" <%= returnBill.resolution === 'Replaced' ? 'selected' : '' %>>Replaced</option>
+                      <option value="Refunded" <%= returnBill.resolution === 'Refunded' ? 'selected' : '' %>>Refunded</option>
+                      <option value="Other" <%= returnBill.resolution === 'Other' ? 'selected' : '' %>>Other</option>
+                    </select>
+                  </div>
+                  <div class="col-md-12 mb-3 resolution-field" style="<%= returnBill.status === 'Pending' ? 'display: none;' : '' %>">
+                    <label for="resolutionNotes" class="form-label">Resolution Notes</label>
+                    <textarea class="form-control" id="resolutionNotes" name="resolutionNotes" rows="3"><%= returnBill.resolutionNotes || '' %></textarea>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-12 text-end">
+                    <a href="/returns/<%= returnBill._id %>" class="btn btn-secondary me-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Update Return Bill</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide resolution fields based on status
+    const statusSelect = document.getElementById('status');
+    const resolutionFields = document.querySelectorAll('.resolution-field');
+    
+    statusSelect.addEventListener('change', function() {
+      if (this.value === 'Resolved') {
+        resolutionFields.forEach(field => {
+          field.style.display = 'block';
+        });
+        
+        // Make resolution required if status is Resolved
+        document.getElementById('resolution').setAttribute('required', 'required');
+      } else {
+        resolutionFields.forEach(field => {
+          field.style.display = 'none';
+        });
+        
+        // Remove required attribute if status is Pending
+        document.getElementById('resolution').removeAttribute('required');
+      }
+    });
+    
+    // Initialize resolution fields based on status
+    if (statusSelect.value === 'Resolved') {
+      resolutionFields.forEach(field => {
+        field.style.display = 'block';
+      });
+      document.getElementById('resolution').setAttribute('required', 'required');
+    }
+    
+    // Add warning for "Re-added to Inventory" option
+    const resolutionSelect = document.getElementById('resolution');
+    
+    resolutionSelect.addEventListener('change', function() {
+      if (this.value === 'Re-added to Inventory') {
+        alert('Warning: Selecting "Re-added to Inventory" will automatically add the returned products back to your inventory when you save this form.');
+      }
+    });
+  });
+</script>
+
+<%- include('../partials/footer') %>

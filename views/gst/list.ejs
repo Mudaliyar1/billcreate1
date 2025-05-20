@@ -1,0 +1,82 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/gst' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">GST Rates</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <a href="/gst/create" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-plus"></i> Add New GST Rate
+          </a>
+        </div>
+      </div>
+
+      <%- include('../partials/messages') %>
+
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title mb-0">GST Rates List</h5>
+            </div>
+            <div class="card-body">
+              <% if (gstRates && gstRates.length > 0) { %>
+                <div class="table-responsive">
+                  <table class="table table-striped table-hover">
+                    <thead>
+                      <tr>
+                        <th>Type</th>
+                        <th>Percentage</th>
+                        <th>Description</th>
+                        <th>Default</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% gstRates.forEach(rate => { %>
+                        <tr>
+                          <td><%= rate.type %></td>
+                          <td><%= rate.percentage %>%</td>
+                          <td><%= rate.description %></td>
+                          <td>
+                            <% if (rate.isDefault) { %>
+                              <span class="badge bg-success">Default</span>
+                            <% } else { %>
+                              <span class="badge bg-secondary">No</span>
+                            <% } %>
+                          </td>
+                          <td><%= new Date(rate.updatedAt).toLocaleDateString() %></td>
+                          <td>
+                            <a href="/gst/<%= rate._id %>/edit" class="btn btn-sm btn-outline-warning">
+                              <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="/gst/<%= rate._id %>/delete" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this GST rate?');">
+                              <i class="fas fa-trash"></i>
+                            </a>
+                          </td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+              <% } else { %>
+                <div class="alert alert-info">
+                  No GST rates found. <a href="/gst/create">Add a new GST rate</a>.
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

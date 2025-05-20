@@ -1,0 +1,2967 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/bills/create' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Create Bill</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <a href="/bills" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Bills
+          </a>
+        </div>
+      </div>
+
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title mb-0">Bill Information</h5>
+            </div>
+            <div class="card-body">
+              <form id="billForm" action="/bills/create" method="POST" onsubmit="return validateBillForm()">
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5>Customer Information</h5>
+                    <hr>
+                  </div>
+
+                  <div class="col-md-12 mb-3">
+                    <label for="customerSearch" class="form-label">Search Customer</label>
+                    <div class="input-group mb-3">
+                      <input type="text" class="form-control" id="customerSearch" placeholder="Search by name or phone...">
+                      <button class="btn btn-outline-secondary" type="button" id="searchCustomerBtn">
+                        <i class="fas fa-search"></i>
+                      </button>
+                    </div>
+                    <div id="customerSearchResults" class="list-group mt-2" style="display: none; max-height: 200px; overflow-y: auto; position: absolute; width: 100%; z-index: 1000; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border: 1px solid #ddd;"></div>
+
+                    <script>
+                      // Ensure customer search works properly
+                      document.addEventListener('DOMContentLoaded', function() {
+                        const searchInput = document.getElementById('customerSearch');
+                        const searchBtn = document.getElementById('searchCustomerBtn');
+                        const resultsContainer = document.getElementById('customerSearchResults');
+                        const nameInput = document.getElementById('customerName');
+                        const phoneInput = document.getElementById('customerPhone');
+                        const placeInput = document.getElementById('customerPlace');
+                        const emailInput = document.getElementById('customerEmail');
+
+                        // Function to search customers
+                        const searchCustomers = () => {
+                          const query = searchInput.value.trim();
+
+                          if (query.length < 2) {
+                            resultsContainer.style.display = 'none';
+                            return;
+                          }
+
+                          resultsContainer.innerHTML = '<div class="list-group-item">Searching...</div>';
+                          resultsContainer.style.display = 'block';
+
+                          fetch(`/api/customers/search?query=${encodeURIComponent(query)}`)
+                            .then(response => response.json())
+                            .then(customers => {
+                              resultsContainer.innerHTML = '';
+
+                              if (customers.length === 0) {
+                                resultsContainer.innerHTML = '<div class="list-group-item">No customers found</div>';
+                              } else {
+                                customers.forEach(customer => {
+                                  const item = document.createElement('a');
+                                  item.href = '#';
+                                  item.className = 'list-group-item list-group-item-action';
+                                  item.innerHTML = `<strong>${customer.name}</strong> - ${customer.phone} (${customer.place})`;
+
+                                  item.addEventListener('click', (e) => {
+                                    e.preventDefault();
+                                    nameInput.value = customer.name;
+                                    phoneInput.value = customer.phone;
+                                    placeInput.value = customer.place;
+                                    if (customer.email) {
+                                      emailInput.value = customer.email;
+                                    }
+                                    resultsContainer.style.display = 'none';
+                                  });
+
+                                  resultsContainer.appendChild(item);
+                                });
+                              }
+                            })
+                            .catch(error => {
+                              console.error('Customer search error:', error);
+                              resultsContainer.innerHTML = `<div class="list-group-item text-danger">Error: ${error.message}</div>`;
+                            });
+                        };
+
+                        // Search on button click
+                        searchBtn.addEventListener('click', searchCustomers);
+
+                        // Search on Enter key press
+                        searchInput.addEventListener('keypress', function(e) {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            searchCustomers();
+                          }
+                        });
+
+                        // Search as you type (with debounce)
+                        let searchTimeout;
+                        searchInput.addEventListener('input', function() {
+                          clearTimeout(searchTimeout);
+                          searchTimeout = setTimeout(searchCustomers, 300);
+                        });
+                      });
+                    </script>
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <label for="customerName" class="form-label">Customer Name</label>
+                    <input type="text" class="form-control" id="customerName" name="customerName" required>
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <label for="customerPhone" class="form-label">Phone Number</label>
+                    <input type="text" class="form-control" id="customerPhone" name="customerPhone" required>
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <label for="customerPlace" class="form-label">Place</label>
+                    <input type="text" class="form-control" id="customerPlace" name="customerPlace" required>
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <label for="customerEmail" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="customerEmail" name="customerEmail" placeholder="Optional">
+                    <small class="form-text text-muted">If provided, bill will be sent to this email</small>
+                  </div>
+
+                  <div class="col-md-6 mb-3">
+                    <label for="work" class="form-label">Work</label>
+                    <input type="text" class="form-control" id="work" name="work" required>
+                  </div>
+
+                  <div class="col-md-6 mb-3">
+                    <label for="pickedBy" class="form-label">Picked By</label>
+                    <input type="text" class="form-control" id="pickedBy" name="pickedBy" required>
+                  </div>
+                </div>
+
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5>Products</h5>
+                    <hr>
+                  </div>
+
+                  <div class="col-md-12 mb-3">
+                    <div id="productContainer">
+                      <!-- Product rows will be added here -->
+                    </div>
+
+                    <button type="button" id="addProductBtn" class="btn btn-outline-primary">
+                      <i class="fas fa-plus"></i> Add Product
+                    </button>
+
+                    <script>
+                      // Ensure Add Product button works
+                      document.addEventListener('DOMContentLoaded', function() {
+                        const addBtn = document.getElementById('addProductBtn');
+                        const productContainer = document.getElementById('productContainer');
+
+                        // Categories
+                        const categories = ['Board', 'Chanel', 'Hardware', 'Bori'];
+
+                        // Function to add product row
+                        const addProductRow = () => {
+                          console.log('Adding new product row');
+                          const productRow = document.createElement('div');
+                          productRow.className = 'row product-row mb-3';
+
+                          productRow.innerHTML = `
+                            <div class="col-md-3 mb-2">
+                              <label class="form-label">Category</label>
+                              <select class="form-select category-select" required>
+                                <option value="" selected disabled>Select Category</option>
+                                ${categories.map(category => `<option value="${category}">${category}</option>`).join('')}
+                              </select>
+                            </div>
+
+                            <div class="col-md-3 mb-2">
+                              <label class="form-label">Product</label>
+                              <select class="form-select product-select" name="productIds[]" required>
+                                <option value="" selected disabled>Select Product</option>
+                              </select>
+                            </div>
+
+                            <div class="col-md-2 mb-2">
+                              <label class="form-label">Quantity</label>
+                              <input type="number" class="form-control quantity-input" name="quantities[]" min="1" value="1" required onchange="updateAmountForRow(this)" oninput="updateAmountForRow(this)">
+                            </div>
+
+                            <div class="col-md-2 mb-2">
+                              <label class="form-label">Amount (₹)</label>
+                              <input type="text" class="form-control product-amount" readonly>
+                            </div>
+
+                            <div class="col-md-2 mb-2 d-flex align-items-end">
+                              <button type="button" class="btn btn-outline-danger remove-product-btn">
+                                <i class="fas fa-trash"></i>
+                              </button>
+                            </div>
+                          `;
+
+                          productContainer.appendChild(productRow);
+
+                          // Add event listener to category select
+                          const categorySelect = productRow.querySelector('.category-select');
+                          const productSelect = productRow.querySelector('.product-select');
+                          const quantityInput = productRow.querySelector('.quantity-input');
+                          const amountInput = productRow.querySelector('.product-amount');
+
+                          categorySelect.addEventListener('change', function() {
+                            const category = this.value;
+
+                            if (!category) {
+                              productSelect.innerHTML = '<option value="" selected disabled>Select Product</option>';
+                              productSelect.disabled = true;
+                              return;
+                            }
+
+                            // Fetch products for selected category
+                            console.log(`Fetching products for category: ${category}`);
+
+                            // Try the new API endpoint first
+                            fetch(`/api/bill-products/category/${category}`, {
+                              method: 'GET',
+                              headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                              },
+                              credentials: 'same-origin'
+                            })
+                              .then(response => {
+                                console.log('Fetch response status:', response.status);
+                                if (!response.ok) {
+                                  if (response.status === 401 || response.status === 403) {
+                                    // Try the original endpoint as fallback
+                                    console.log('Trying original API endpoint as fallback...');
+                                    return fetch(`/api/products/category/${category}`, {
+                                      method: 'GET',
+                                      headers: {
+                                        'Accept': 'application/json',
+                                        'Content-Type': 'application/json'
+                                      },
+                                      credentials: 'same-origin'
+                                    });
+                                  }
+                                  throw new Error(`Server error: ${response.status}`);
+                                }
+                                return response;
+                              })
+                              .then(response => {
+                                if (!response.ok) {
+                                  throw new Error(`Server error: ${response.status}`);
+                                }
+                                return response.json();
+                              })
+                              .then(products => {
+                                // Debug: Log the products data to see if quantity is included
+                                console.log('Products data:', products);
+                                // Clear and reset the product select
+                                productSelect.innerHTML = '<option value="" selected disabled>Select Product</option>';
+                                productSelect.disabled = false;
+
+                                if (products.length === 0) {
+                                  // No products found for this category
+                                  const option = document.createElement('option');
+                                  option.value = "";
+                                  option.textContent = 'No products available';
+                                  option.disabled = true;
+                                  productSelect.appendChild(option);
+                                  return;
+                                }
+
+                                // Add products to select
+                                products.forEach(product => {
+                                  const option = document.createElement('option');
+                                  option.value = product._id;
+
+                                  // Show quantity in the option text
+                                  const quantity = product.quantity || 0;
+                                  const lowStock = quantity <= 5;
+
+                                  option.textContent = `${product.name} - ₹${product.price.toFixed(2)} (${quantity} in stock${lowStock ? ' - LOW STOCK' : ''})`;
+                                  option.dataset.price = product.price;
+                                  option.dataset.quantity = quantity;
+
+                                  // Disable option if out of stock
+                                  if (quantity <= 0) {
+                                    option.disabled = true;
+                                    option.textContent = `${product.name} - OUT OF STOCK`;
+                                  }
+
+                                  productSelect.appendChild(option);
+
+                                  // We'll use the event listeners below instead of attributes
+                                });
+
+                                // If there's only one product, select it automatically
+                                if (products.length === 1) {
+                                  console.log('Only one product found, auto-selecting it');
+                                  const option = productSelect.querySelector(`option[value="${products[0]._id}"]`);
+                                  if (option) {
+                                    option.selected = true;
+                                    console.log('Auto-selected product:', products[0].name);
+
+                                    // Force update the amount calculation with a slight delay
+                                    setTimeout(() => {
+                                      console.log('Delayed update for single product');
+                                      const price = parseFloat(products[0].price);
+                                      const quantity = parseInt(quantityInput.value);
+
+                                      if (!isNaN(price) && !isNaN(quantity)) {
+                                        const amount = price * quantity;
+                                        amountInput.value = '₹' + amount.toFixed(2);
+                                        console.log(`Set amount to: ₹${amount.toFixed(2)}`);
+
+                                        // Update total amount
+                                        updateTotalAmount();
+
+                                        // Also directly update the total amount display
+                                        const totalAmountElement = document.getElementById('totalAmount');
+                                        if (totalAmountElement) {
+                                          totalAmountElement.textContent = '₹' + amount.toFixed(2);
+                                          console.log(`Directly set total amount to: ₹${amount.toFixed(2)}`);
+                                        }
+
+                                        // Update paid amount input
+                                        const paidAmountInput = document.getElementById('paidAmount');
+                                        if (paidAmountInput) {
+                                          paidAmountInput.setAttribute('max', amount.toFixed(2));
+                                          // Only set the value if the user hasn't manually edited it
+                                          if (!userEditedPaidAmount) {
+                                            paidAmountInput.value = amount.toFixed(2);
+                                          }
+                                        }
+
+                                        // Force a direct update of the total amount
+                                        document.getElementById('totalAmount').textContent = '₹' + amount.toFixed(2);
+                                      }
+                                    }, 100);
+
+                                    // Also try an immediate update
+                                    const price = parseFloat(products[0].price);
+                                    const quantity = parseInt(quantityInput.value || 1);
+                                    if (!isNaN(price) && !isNaN(quantity)) {
+                                      const amount = price * quantity;
+                                      document.getElementById('totalAmount').textContent = '₹' + amount.toFixed(2);
+                                      console.log(`IMMEDIATE: Set total amount to: ₹${amount.toFixed(2)}`);
+                                    }
+                                  }
+                                }
+
+                                // Add event listener to update amount when product changes
+                                productSelect.addEventListener('change', function() {
+                                  updateAmountForProductSelect(this);
+                                });
+
+                                // Add event listener to update amount when quantity changes
+                                quantityInput.addEventListener('input', function() {
+                                  updateAmountForRow(this);
+                                });
+
+                                // Also add change event listener for quantity
+                                quantityInput.addEventListener('change', function() {
+                                  updateAmountForRow(this);
+                                });
+
+                                // Add blur event to ensure calculation happens
+                                quantityInput.addEventListener('blur', function() {
+                                  updateAmountForRow(this);
+                                });
+                              })
+                              .catch(error => {
+                                console.error('Fetch products error:', error);
+
+                                // Try one more time with a direct fetch to the original endpoint
+                                console.log('Trying direct fetch as last resort...');
+                                fetch(`/api/products/category/${category}`)
+                                  .then(response => response.json())
+                                  .then(products => {
+                                    if (products && products.length > 0) {
+                                      console.log('Direct fetch succeeded:', products);
+
+                                      // Process products as normal
+                                      productSelect.innerHTML = '<option value="" selected disabled>Select Product</option>';
+                                      productSelect.disabled = false;
+
+                                      // Add products to select
+                                      products.forEach(product => {
+                                        const option = document.createElement('option');
+                                        option.value = product._id;
+
+                                        // Show quantity in the option text
+                                        const quantity = product.quantity || 0;
+                                        const lowStock = quantity <= 5;
+
+                                        option.textContent = `${product.name} - ₹${product.price.toFixed(2)} (${quantity} in stock${lowStock ? ' - LOW STOCK' : ''})`;
+                                        option.dataset.price = product.price;
+                                        option.dataset.quantity = quantity;
+
+                                        productSelect.appendChild(option);
+                                      });
+
+                                      // If there's only one product, select it automatically
+                                      if (products.length === 1) {
+                                        const option = productSelect.querySelector(`option[value="${products[0]._id}"]`);
+                                        if (option) {
+                                          option.selected = true;
+
+                                          // Force update the amount calculation
+                                          setTimeout(() => {
+                                            const price = parseFloat(products[0].price);
+                                            const quantity = parseInt(quantityInput.value);
+
+                                            if (!isNaN(price) && !isNaN(quantity)) {
+                                              const amount = price * quantity;
+                                              amountInput.value = '₹' + amount.toFixed(2);
+                                              calculateTotalAmount();
+
+                                              // Also directly update the total amount display
+                                              const totalAmountElement = document.getElementById('totalAmount');
+                                              if (totalAmountElement) {
+                                                totalAmountElement.textContent = '₹' + amount.toFixed(2);
+                                                console.log(`Directly set total amount to: ₹${amount.toFixed(2)}`);
+                                              }
+
+                                              // Update paid amount input
+                                              const paidAmountInput = document.getElementById('paidAmount');
+                                              if (paidAmountInput) {
+                                                paidAmountInput.setAttribute('max', amount.toFixed(2));
+                                                // Only set the value if the user hasn't manually edited it
+                                                if (!userEditedPaidAmount) {
+                                                  paidAmountInput.value = amount.toFixed(2);
+                                                }
+                                              }
+
+                                              // Force a direct update of the total amount
+                                              document.getElementById('totalAmount').textContent = '₹' + amount.toFixed(2);
+                                            }
+                                          }, 100);
+
+                                          // Also try an immediate update
+                                          const price = parseFloat(products[0].price);
+                                          const quantity = parseInt(quantityInput.value || 1);
+                                          if (!isNaN(price) && !isNaN(quantity)) {
+                                            const amount = price * quantity;
+                                            document.getElementById('totalAmount').textContent = '₹' + amount.toFixed(2);
+                                            console.log(`IMMEDIATE: Set total amount to: ₹${amount.toFixed(2)}`);
+                                          }
+                                        }
+                                      }
+
+                                      // Add event listeners
+                                      productSelect.addEventListener('change', function() {
+                                        updateAmountForProductSelect(this);
+                                      });
+                                    } else {
+                                      throw new Error('No products found');
+                                    }
+                                  })
+                                  .catch(finalError => {
+                                    console.error('Final fetch attempt failed:', finalError);
+                                    console.log('Setting product options to empty state due to error');
+                                    // Add a default option that indicates the error
+                                    productSelect.innerHTML = '<option value="" selected disabled>Failed to load products</option>';
+                                    productSelect.disabled = true;
+                                  });
+                              });
+                          });
+
+                          // Add event listener to remove button
+                          const removeBtn = productRow.querySelector('.remove-product-btn');
+                          removeBtn.addEventListener('click', function() {
+                            productRow.remove();
+                            // Recalculate total amount after removing a product
+                            calculateTotalAmount();
+                          });
+                        };
+
+                        // Add event listener to the Add Product button
+                        addBtn.addEventListener('click', function() {
+                          console.log('Add Product button clicked');
+                          addProductRow();
+                        });
+
+                        // Check if there are any products in the database
+                        console.log('Checking for products in the database...');
+
+                        // Try multiple endpoints to ensure we get a response
+                        const checkProducts = () => {
+                          return fetch('/api/bill-products/category/Board', {
+                            method: 'GET',
+                            headers: {
+                              'Accept': 'application/json',
+                              'Content-Type': 'application/json'
+                            },
+                            credentials: 'same-origin'
+                          })
+                          .then(response => {
+                            console.log('Initial product check response status:', response.status);
+                            if (!response.ok) {
+                              // Try the original endpoint
+                              return fetch('/api/products/category/Board');
+                            }
+                            return response;
+                          })
+                          .then(response => {
+                            if (!response.ok) {
+                              throw new Error(`Server error: ${response.status}`);
+                            }
+                            return response.json();
+                          });
+                        };
+
+                        checkProducts()
+                          .then(products => {
+                            if (products.length === 0) {
+                              // No products found, show a warning
+                              const warningDiv = document.createElement('div');
+                              warningDiv.className = 'alert alert-warning';
+                              warningDiv.innerHTML = '<strong>No products found!</strong> Please add products in the <a href="/products/add">Products section</a> before creating a bill.';
+                              productContainer.appendChild(warningDiv);
+                            }
+
+                            // Add first product row if container is empty
+                            if (productContainer.querySelector('.product-row') === null) {
+                              addProductRow();
+
+                              // Force calculation of total amount after adding the first row
+                              setTimeout(() => {
+                                const rows = document.querySelectorAll('.product-row');
+                                if (rows.length > 0) {
+                                  const row = rows[0];
+                                  const productSelect = row.querySelector('.product-select');
+
+                                  if (productSelect && productSelect.selectedIndex > 0) {
+                                    const selectedOption = productSelect.options[productSelect.selectedIndex];
+                                    const price = parseFloat(selectedOption.dataset.price);
+                                    const quantityInput = row.querySelector('.quantity-input');
+                                    const quantity = parseInt(quantityInput.value || 1);
+                                    const amountInput = row.querySelector('.product-amount');
+
+                                    if (!isNaN(price) && !isNaN(quantity)) {
+                                      const amount = price * quantity;
+                                      amountInput.value = '₹' + amount.toFixed(2);
+
+                                      // Update total amount display
+                                      const totalAmountElement = document.getElementById('totalAmount');
+                                      if (totalAmountElement) {
+                                        totalAmountElement.textContent = '₹' + amount.toFixed(2);
+                                        console.log(`Initial row: Set total amount to: ₹${amount.toFixed(2)}`);
+                                      }
+
+                                      // Update paid amount input
+                                      const paidAmountInput = document.getElementById('paidAmount');
+                                      if (paidAmountInput) {
+                                        paidAmountInput.setAttribute('max', amount.toFixed(2));
+                                        // Only set the value if the user hasn't manually edited it
+                                        if (!userEditedPaidAmount) {
+                                          paidAmountInput.value = amount.toFixed(2);
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }, 1000);
+                            }
+                          })
+                          .catch(error => {
+                            console.error('Error checking products:', error);
+                            // Add first product row anyway
+                            if (productContainer.querySelector('.product-row') === null) {
+                              addProductRow();
+                            }
+                          });
+                      });
+                    </script>
+                  </div>
+                </div>
+
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5>GST Information</h5>
+                    <hr>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="gstEnabled" name="gstEnabled">
+                      <label class="form-check-label" for="gstEnabled">Enable GST</label>
+                    </div>
+                    <small class="form-text text-muted">Toggle to enable/disable GST for this bill</small>
+                    <!-- Hidden inputs for GST values in case API fails -->
+                    <input type="hidden" id="defaultGstType" name="defaultGstType" value="CGST+SGST 12%">
+                  </div>
+                  <div class="col-md-6 mb-3" id="gstTypeContainer" style="display: none;">
+                    <label for="gstType" class="form-label">GST Type</label>
+                    <select class="form-select" id="gstType" name="gstType">
+                      <option value="" selected disabled>Select GST Type</option>
+                      <!-- GST types will be loaded dynamically -->
+                    </select>
+                  </div>
+                  <div class="col-md-6 mb-3" id="gstPercentageContainer" style="display: none;">
+                    <label for="gstPercentage" class="form-label">GST Percentage (%)</label>
+                    <input type="text" class="form-control" id="gstPercentage" name="gstPercentage" readonly>
+                    <small class="form-text text-muted">GST percentage is set based on the selected GST type</small>
+                  </div>
+                  <div class="col-md-6 mb-3" id="gstAmountContainer" style="display: none;">
+                    <label for="gstAmount" class="form-label">GST Amount (₹)</label>
+                    <input type="text" class="form-control" id="gstAmount" name="gstAmount" readonly>
+                    <small class="form-text text-muted">GST amount calculated based on subtotal</small>
+                  </div>
+                </div>
+
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5>Payment Information</h5>
+                    <hr>
+                  </div>
+
+                  <input type="hidden" id="paymentType" name="paymentType" value="Cash">
+                  <div class="col-md-6 mb-3">
+                    <label for="paidAmount" class="form-label">Paid Amount (₹)</label>
+                    <!-- Hidden input for form submission -->
+                    <input type="hidden" id="actualPaidAmount" name="paidAmount" value="0">
+                    <!-- Visible input for user interaction -->
+                    <input type="text" class="form-control" id="paidAmountDisplay"
+                      placeholder="0.00"
+                      required>
+                    <div class="invalid-feedback" id="paidAmountFeedback">Paid amount cannot exceed the total amount.</div>
+                    <small class="form-text text-muted">Enter amount paid by customer (must be less than or equal to total amount)</small>
+                  </div>
+
+                  <div class="col-md-6 mb-3">
+                    <div class="alert alert-info">
+                      <small>Enter the amount paid by the customer. If the customer pays the full amount, the remaining amount will be 0.</small>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Total Amount Display -->
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <div class="card bg-light">
+                      <div class="card-body">
+                        <div class="row align-items-center" id="subtotalRow">
+                          <div class="col-md-6">
+                            <h5 class="mb-0">Subtotal:</h5>
+                          </div>
+                          <div class="col-md-6 text-end">
+                            <h5 class="mb-0" id="subtotalAmount">₹0.00</h5>
+                          </div>
+                        </div>
+                        <div class="row align-items-center mt-2" id="gstRow" style="display: none;">
+                          <div class="col-md-6">
+                            <h5 class="mb-0">GST (<span id="gstDisplayType"></span> @ <span id="gstDisplayPercentage">0</span>%):</h5>
+                          </div>
+                          <div class="col-md-6 text-end">
+                            <h5 class="mb-0" id="gstDisplayAmount">₹0.00</h5>
+                          </div>
+                        </div>
+                        <hr class="my-2">
+                        <div class="row align-items-center">
+                          <div class="col-md-6">
+                            <h5 class="mb-0">Total Amount:</h5>
+                          </div>
+                          <div class="col-md-6 text-end">
+                            <h3 class="mb-0" id="totalAmount">₹0.00</h3>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-12">
+                    <div class="d-grid gap-2">
+                      <button type="submit" class="btn btn-primary">Create Bill</button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  // Flag to track if user has manually edited the paid amount
+  let userEditedPaidAmount = false;
+  let userPaidAmount = null;
+
+  // Function to handle paid amount changes
+  function handlePaidAmountChange(input) {
+    const totalAmountElement = document.getElementById('totalAmount');
+    if (!totalAmountElement) return;
+
+    // Mark that user has manually edited the paid amount
+    userEditedPaidAmount = true;
+
+    // Get the total amount
+    const totalText = totalAmountElement.textContent;
+    const totalValue = parseFloat(totalText.replace('₹', ''));
+
+    // Get the paid amount
+    let paidValue = parseFloat(input.value);
+
+    // If the input is not a valid number, don't proceed with validation
+    if (isNaN(paidValue)) {
+      // Allow empty or partial input during typing
+      if (input.value === '' || input.value === '.' || input.value.endsWith('.')) {
+        input.classList.remove('is-invalid');
+        return;
+      }
+
+      // Invalid input that's not empty or partial
+      input.classList.add('is-invalid');
+      document.getElementById('paidAmountFeedback').textContent = 'Please enter a valid number';
+      document.getElementById('paidAmountFeedback').style.display = 'block';
+      return;
+    }
+
+    // Store the user's input
+    userPaidAmount = paidValue;
+    console.log('User set paid amount to:', paidValue);
+
+    // Check if paid amount exceeds total
+    if (paidValue > totalValue) {
+      input.value = totalValue.toFixed(2); // Reset to max allowed value
+      userPaidAmount = totalValue; // Update stored value
+      input.classList.add('is-invalid');
+      document.getElementById('paidAmountFeedback').textContent = 'Paid amount cannot exceed the total amount';
+      document.getElementById('paidAmountFeedback').style.display = 'block';
+    } else {
+      // Valid input
+      input.classList.remove('is-invalid');
+      document.getElementById('paidAmountFeedback').style.display = 'none';
+
+      // Format the number to have 2 decimal places
+      if (input.value !== '' && !input.value.endsWith('.') && !input.value.endsWith('.0')) {
+        input.value = paidValue.toFixed(2);
+      }
+    }
+  }
+
+  // Direct function to update amount for a row when product select changes
+  function updateAmountForProductSelect(productSelect) {
+    const row = productSelect.closest('.product-row');
+    if (!row) return;
+
+    const quantityInput = row.querySelector('.quantity-input');
+    const amountInput = row.querySelector('.product-amount');
+
+    if (productSelect.selectedIndex > 0 && quantityInput && quantityInput.value) {
+      const selectedOption = productSelect.options[productSelect.selectedIndex];
+      const price = parseFloat(selectedOption.dataset.price);
+      const quantity = parseInt(quantityInput.value);
+
+      if (!isNaN(price) && !isNaN(quantity)) {
+        const amount = price * quantity;
+        amountInput.value = '₹' + amount.toFixed(2);
+
+        // Update total
+        console.log('Updating total amount after product selection');
+        updateTotalAmount();
+
+        // Also directly update the total amount display
+        const totalAmountElement = document.getElementById('totalAmount');
+        if (totalAmountElement) {
+          // Calculate total from all rows
+          let total = 0;
+          document.querySelectorAll('.product-row').forEach(r => {
+            const ps = r.querySelector('.product-select');
+            const qi = r.querySelector('.quantity-input');
+
+            if (ps && ps.selectedIndex > 0 && qi && qi.value) {
+              const so = ps.options[ps.selectedIndex];
+              const p = parseFloat(so.dataset.price);
+              const q = parseInt(qi.value);
+
+              if (!isNaN(p) && !isNaN(q)) {
+                total += p * q;
+              }
+            }
+          });
+
+          totalAmountElement.textContent = '₹' + total.toFixed(2);
+          console.log(`Direct update: Set total amount to: ₹${total.toFixed(2)}`);
+
+          // Update paid amount input
+          const paidAmountInput = document.getElementById('paidAmount');
+          if (paidAmountInput) {
+            paidAmountInput.setAttribute('max', total.toFixed(2));
+            // Only set the value if the user hasn't manually edited it
+            if (!userEditedPaidAmount) {
+              paidAmountInput.value = total.toFixed(2);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Direct function to update amount for a row when quantity changes
+  function updateAmountForRow(quantityInput) {
+    const row = quantityInput.closest('.product-row');
+    if (!row) return;
+
+    const productSelect = row.querySelector('.product-select');
+    const amountInput = row.querySelector('.product-amount');
+
+    if (productSelect && productSelect.selectedIndex > 0 && quantityInput.value) {
+      const selectedOption = productSelect.options[productSelect.selectedIndex];
+      const price = parseFloat(selectedOption.dataset.price);
+      const quantity = parseInt(quantityInput.value);
+
+      if (!isNaN(price) && !isNaN(quantity)) {
+        const amount = price * quantity;
+        amountInput.value = '₹' + amount.toFixed(2);
+
+        // Update total
+        console.log('Updating total amount after quantity change');
+        updateTotalAmount();
+
+        // Also directly update the total amount display
+        const totalAmountElement = document.getElementById('totalAmount');
+        if (totalAmountElement) {
+          // Calculate total from all rows
+          let total = 0;
+          document.querySelectorAll('.product-row').forEach(r => {
+            const ps = r.querySelector('.product-select');
+            const qi = r.querySelector('.quantity-input');
+
+            if (ps && ps.selectedIndex > 0 && qi && qi.value) {
+              const so = ps.options[ps.selectedIndex];
+              const p = parseFloat(so.dataset.price);
+              const q = parseInt(qi.value);
+
+              if (!isNaN(p) && !isNaN(q)) {
+                total += p * q;
+              }
+            }
+          });
+
+          totalAmountElement.textContent = '₹' + total.toFixed(2);
+          console.log(`Direct update: Set total amount to: ₹${total.toFixed(2)}`);
+
+          // Update paid amount input
+          const paidAmountInput = document.getElementById('paidAmount');
+          if (paidAmountInput) {
+            paidAmountInput.setAttribute('max', total.toFixed(2));
+            // Only set the value if the user hasn't manually edited it
+            if (!userEditedPaidAmount) {
+              paidAmountInput.value = total.toFixed(2);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Function to update total amount
+  function updateTotalAmount() {
+    console.log('Calculating total amount...');
+    let total = 0;
+    const rows = document.querySelectorAll('.product-row');
+    console.log(`Found ${rows.length} product rows`);
+
+    rows.forEach((row, index) => {
+      const productSelect = row.querySelector('.product-select');
+      const quantityInput = row.querySelector('.quantity-input');
+      const amountInput = row.querySelector('.product-amount');
+
+      console.log(`Row ${index + 1}:`, {
+        hasProductSelect: !!productSelect,
+        selectedIndex: productSelect ? productSelect.selectedIndex : 'N/A',
+        hasQuantityInput: !!quantityInput,
+        quantityValue: quantityInput ? quantityInput.value : 'N/A',
+        amountValue: amountInput ? amountInput.value : 'N/A'
+      });
+
+      if (productSelect && productSelect.selectedIndex > 0 && quantityInput && quantityInput.value) {
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
+        const price = parseFloat(selectedOption.dataset.price);
+        const quantity = parseInt(quantityInput.value);
+
+        console.log(`Row ${index + 1} calculation:`, { price, quantity });
+
+        if (!isNaN(price) && !isNaN(quantity)) {
+          const rowTotal = price * quantity;
+          total += rowTotal;
+          console.log(`Row ${index + 1} total: ${rowTotal}, Running total: ${total}`);
+        }
+      }
+    });
+
+    // Update subtotal
+    const subtotalAmountElement = document.getElementById('subtotalAmount');
+    if (subtotalAmountElement) {
+      subtotalAmountElement.textContent = '₹' + total.toFixed(2);
+      console.log(`Updated subtotal amount display to: ${total.toFixed(2)}`);
+
+      // Store subtotal for GST calculations
+      subtotal = total;
+    }
+
+    // Check if GST is enabled
+    const gstEnabledCheckbox = document.getElementById('gstEnabled');
+    if (gstEnabledCheckbox && gstEnabledCheckbox.checked && selectedGstRate) {
+      // Calculate GST amount
+      calculateGstAmount();
+    } else {
+      // No GST, total is the same as subtotal
+      const totalAmountElement = document.getElementById('totalAmount');
+      if (totalAmountElement) {
+        totalAmountElement.textContent = '₹' + total.toFixed(2);
+        console.log(`Updated total amount display to: ${total.toFixed(2)}`);
+
+        // Also update the paid amount input
+        const paidAmountInput = document.getElementById('actualPaidAmount');
+        const paidAmountDisplay = document.getElementById('paidAmountDisplay');
+        if (paidAmountInput && paidAmountDisplay) {
+          // Only update if user hasn't manually edited it
+          if (!userEditedPaidAmount) {
+            paidAmountInput.value = total.toFixed(2);
+            paidAmountDisplay.value = total.toFixed(2);
+          } else if (userPaidAmount !== null) {
+            // If user has edited, cap at total if needed
+            const valueToSet = Math.min(userPaidAmount, total);
+            paidAmountInput.value = valueToSet.toFixed(2);
+            paidAmountDisplay.value = valueToSet.toFixed(2);
+          }
+        }
+
+        // Add hidden input for subtotal
+        let subtotalInput = document.getElementById('subtotalInput');
+        if (!subtotalInput) {
+          subtotalInput = document.createElement('input');
+          subtotalInput.type = 'hidden';
+          subtotalInput.id = 'subtotalInput';
+          subtotalInput.name = 'subTotal';
+          document.getElementById('billForm').appendChild(subtotalInput);
+        }
+        subtotalInput.value = total.toFixed(2);
+      }
+    }
+  }
+
+  // Function to validate the bill form before submission
+  function validateBillForm() {
+    // Check customer information
+    const customerName = document.getElementById('customerName').value.trim();
+    const customerPhone = document.getElementById('customerPhone').value.trim();
+    const customerPlace = document.getElementById('customerPlace').value.trim();
+
+    if (!customerName) {
+      alert('Please enter customer name');
+      document.getElementById('customerName').focus();
+      return false;
+    }
+
+    if (!customerPhone) {
+      alert('Please enter customer phone number');
+      document.getElementById('customerPhone').focus();
+      return false;
+    }
+
+    if (!customerPlace) {
+      alert('Please enter customer place');
+      document.getElementById('customerPlace').focus();
+      return false;
+    }
+
+    // Check work and picked by
+    const work = document.getElementById('work').value.trim();
+    const pickedBy = document.getElementById('pickedBy').value.trim();
+
+    if (!work) {
+      alert('Please enter work details');
+      document.getElementById('work').focus();
+      return false;
+    }
+
+    if (!pickedBy) {
+      alert('Please enter who picked the order');
+      document.getElementById('pickedBy').focus();
+      return false;
+    }
+
+    // Check if at least one product is selected
+    const productRows = document.querySelectorAll('.product-row');
+    let hasValidProduct = false;
+
+    for (const row of productRows) {
+      const productSelect = row.querySelector('.product-select');
+      if (productSelect && productSelect.value) {
+        hasValidProduct = true;
+        break;
+      }
+    }
+
+    if (!hasValidProduct) {
+      alert('Please select at least one product');
+      return false;
+    }
+
+    // Check paid amount
+    const paidAmount = document.getElementById('paidAmount').value;
+    if (!paidAmount && paidAmount !== '0') {
+      alert('Please enter paid amount');
+      document.getElementById('paidAmount').focus();
+      return false;
+    }
+
+    // All validations passed
+    return true;
+  }
+
+  // GST related functions
+  let gstRates = [];
+  let selectedGstRate = null;
+  let subtotal = 0;
+
+  // Function to fetch GST rates from the server
+  function fetchGstRates() {
+    console.log('Fetching GST rates...');
+    fetch('/api/gst', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      credentials: 'same-origin'
+    })
+    .then(response => {
+      console.log('GST API response status:', response.status);
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('GST API response data:', data);
+      if (data.success) {
+        gstRates = data.data;
+        console.log('GST rates loaded:', gstRates);
+
+        // Populate GST type dropdown
+        populateGstTypes();
+
+        // Set default GST rate if available
+        const defaultRate = gstRates.find(rate => rate.isDefault);
+        if (defaultRate) {
+          console.log('Default GST rate found:', defaultRate);
+          const gstTypeSelect = document.getElementById('gstType');
+          if (gstTypeSelect) {
+            gstTypeSelect.value = defaultRate._id;
+            updateGstPercentage(defaultRate);
+          }
+        } else if (gstRates.length > 0) {
+          // If no default rate but we have rates, use the first one
+          console.log('No default GST rate, using first available:', gstRates[0]);
+          const gstTypeSelect = document.getElementById('gstType');
+          if (gstTypeSelect) {
+            gstTypeSelect.value = gstRates[0]._id;
+            updateGstPercentage(gstRates[0]);
+          }
+        }
+      } else {
+        console.error('Failed to load GST rates:', data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching GST rates:', error);
+    });
+  }
+
+  // Function to populate GST types dropdown
+  function populateGstTypes() {
+    const gstTypeSelect = document.getElementById('gstType');
+    if (!gstTypeSelect) return;
+
+    // Clear existing options
+    gstTypeSelect.innerHTML = '<option value="" selected disabled>Select GST Type</option>';
+
+    // Add GST types
+    gstRates.forEach(rate => {
+      const option = document.createElement('option');
+      option.value = rate._id;
+      option.textContent = `${rate.type} (${rate.percentage}%)`;
+      option.dataset.percentage = rate.percentage;
+      option.dataset.type = rate.type;
+      gstTypeSelect.appendChild(option);
+    });
+  }
+
+  // Function to update GST percentage display
+  function updateGstPercentage(rate) {
+    const gstPercentageInput = document.getElementById('gstPercentage');
+    if (!gstPercentageInput) return;
+
+    gstPercentageInput.value = rate.percentage;
+    selectedGstRate = rate;
+
+    // Update GST display in the total section
+    document.getElementById('gstDisplayType').textContent = rate.type;
+    document.getElementById('gstDisplayPercentage').textContent = rate.percentage;
+
+    // Recalculate GST amount
+    calculateGstAmount();
+  }
+
+  // Function to calculate GST amount
+  function calculateGstAmount() {
+    if (!selectedGstRate) return;
+
+    const gstAmountInput = document.getElementById('gstAmount');
+    const gstDisplayAmount = document.getElementById('gstDisplayAmount');
+    if (!gstAmountInput || !gstDisplayAmount) return;
+
+    const gstAmount = (subtotal * selectedGstRate.percentage) / 100;
+    gstAmountInput.value = gstAmount.toFixed(2);
+    gstDisplayAmount.textContent = '₹' + gstAmount.toFixed(2);
+
+    // Update total amount
+    updateTotalWithGst();
+  }
+
+  // Function to update total amount with GST
+  function updateTotalWithGst() {
+    const totalAmountElement = document.getElementById('totalAmount');
+    const gstAmountInput = document.getElementById('gstAmount');
+    if (!totalAmountElement || !gstAmountInput) return;
+
+    const gstAmount = parseFloat(gstAmountInput.value) || 0;
+    const total = subtotal + gstAmount;
+
+    console.log('Updating total with GST:', {
+      subtotal: subtotal,
+      gstAmount: gstAmount,
+      total: total
+    });
+
+    totalAmountElement.textContent = '₹' + total.toFixed(2);
+
+    // Update paid amount input
+    const paidAmountInput = document.getElementById('actualPaidAmount');
+    const paidAmountDisplay = document.getElementById('paidAmountDisplay');
+    if (paidAmountInput && paidAmountDisplay) {
+      // Only update if user hasn't manually edited
+      if (!userEditedPaidAmount) {
+        paidAmountInput.value = total.toFixed(2);
+        paidAmountDisplay.value = total.toFixed(2);
+      } else if (userPaidAmount !== null) {
+        // If user has edited, cap at total if needed
+        const valueToSet = Math.min(userPaidAmount, total);
+        paidAmountInput.value = valueToSet.toFixed(2);
+        paidAmountDisplay.value = valueToSet.toFixed(2);
+      }
+    }
+
+    // Add hidden input for subtotal
+    let subtotalInput = document.getElementById('subtotalInput');
+    if (!subtotalInput) {
+      subtotalInput = document.createElement('input');
+      subtotalInput.type = 'hidden';
+      subtotalInput.id = 'subtotalInput';
+      subtotalInput.name = 'subTotal';
+      document.getElementById('billForm').appendChild(subtotalInput);
+    }
+    subtotalInput.value = subtotal.toFixed(2);
+
+    // Add hidden input for total amount with GST
+    let totalWithGstInput = document.getElementById('totalWithGstInput');
+    if (!totalWithGstInput) {
+      totalWithGstInput = document.createElement('input');
+      totalWithGstInput.type = 'hidden';
+      totalWithGstInput.id = 'totalWithGstInput';
+      totalWithGstInput.name = 'totalWithGst';
+      document.getElementById('billForm').appendChild(totalWithGstInput);
+    }
+    totalWithGstInput.value = total.toFixed(2);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const productContainer = document.getElementById('productContainer');
+    const addProductBtn = document.getElementById('addProductBtn');
+    const paymentType = document.getElementById('paymentType');
+    const creditTypeContainer = document.getElementById('creditTypeContainer');
+    const creditType = document.getElementById('creditType');
+    const customerNameInput = document.getElementById('customerName');
+    const customerPhoneInput = document.getElementById('customerPhone');
+    const customerPlaceInput = document.getElementById('customerPlace');
+
+    // GST related elements
+    const gstEnabledCheckbox = document.getElementById('gstEnabled');
+    const gstTypeContainer = document.getElementById('gstTypeContainer');
+    const gstPercentageContainer = document.getElementById('gstPercentageContainer');
+    const gstAmountContainer = document.getElementById('gstAmountContainer');
+    const gstRow = document.getElementById('gstRow');
+    const gstTypeSelect = document.getElementById('gstType');
+
+    // Categories
+    const categories = ['Board', 'Chanel', 'Hardware', 'Bori'];
+
+    // Function to add product row
+    const addProductRow = () => {
+      const productRow = document.createElement('div');
+      productRow.className = 'row product-row mb-3';
+
+      productRow.innerHTML = `
+        <div class="col-md-3 mb-2">
+          <label class="form-label">Category</label>
+          <select class="form-select category-select" required>
+            <option value="" selected disabled>Select Category</option>
+            ${categories.map(category => `<option value="${category}">${category}</option>`).join('')}
+          </select>
+        </div>
+
+        <div class="col-md-3 mb-2">
+          <label class="form-label">Product</label>
+          <select class="form-select product-select" name="productIds" required>
+            <option value="" selected disabled>Select Product</option>
+          </select>
+        </div>
+
+        <div class="col-md-2 mb-2">
+          <label class="form-label">Quantity</label>
+          <input type="number" class="form-control quantity-input" name="quantities" min="1" value="1" required onchange="updateAmountForRow(this)" oninput="updateAmountForRow(this)">
+        </div>
+
+        <div class="col-md-2 mb-2">
+          <label class="form-label">Amount (₹)</label>
+          <input type="text" class="form-control product-amount" readonly>
+        </div>
+
+        <div class="col-md-2 mb-2 d-flex align-items-end">
+          <button type="button" class="btn btn-outline-danger remove-product-btn">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `;
+
+      productContainer.appendChild(productRow);
+
+      // Add event listener to category select
+      const categorySelect = productRow.querySelector('.category-select');
+      const productSelect = productRow.querySelector('.product-select');
+      const quantityInput = productRow.querySelector('.quantity-input');
+      const amountInput = productRow.querySelector('.product-amount');
+
+      categorySelect.addEventListener('change', function() {
+        const category = this.value;
+
+        if (!category) {
+          productSelect.innerHTML = '<option value="" selected disabled>Select Product</option>';
+          productSelect.disabled = true;
+          return;
+        }
+
+        // Fetch products for selected category
+        console.log(`Fetching products for category: ${category}`);
+
+        // Try the new API endpoint first
+        fetch(`/api/bill-products/category/${category}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          credentials: 'same-origin'
+        })
+        .then(response => {
+          console.log('Fetch response status:', response.status);
+          if (!response.ok) {
+            // Try the original endpoint as fallback
+            console.log('Trying original API endpoint as fallback...');
+            return fetch(`/api/products/category/${category}`);
+          }
+          return response;
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(products => {
+          // Debug: Log the products data to see if quantity is included
+          console.log('Products data:', products);
+          // Clear and reset the product select
+          productSelect.innerHTML = '<option value="" selected disabled>Select Product</option>';
+          productSelect.disabled = false;
+
+          if (products.length === 0) {
+            // No products found for this category
+            const option = document.createElement('option');
+            option.value = "";
+            option.textContent = 'No products available';
+            option.disabled = true;
+            productSelect.appendChild(option);
+            return;
+          }
+
+            // Add products to select
+            products.forEach(product => {
+              const option = document.createElement('option');
+              option.value = product._id;
+
+              // Show quantity in the option text
+              const quantity = product.quantity || 0;
+              const lowStock = quantity <= 5;
+
+              option.textContent = `${product.name} - ₹${product.price.toFixed(2)} (${quantity} in stock${lowStock ? ' - LOW STOCK' : ''})`;
+              option.dataset.price = product.price;
+              option.dataset.quantity = quantity;
+
+              // Disable option if out of stock
+              if (quantity <= 0) {
+                option.disabled = true;
+                option.textContent = `${product.name} - OUT OF STOCK`;
+              }
+
+              productSelect.appendChild(option);
+
+              // Add onchange attribute to the select
+              productSelect.setAttribute('onchange', 'updateAmountForProductSelect(this)');
+            });
+
+            // If there's only one product, select it automatically
+            if (products.length === 1) {
+              console.log('Only one product found, auto-selecting it');
+              const option = productSelect.querySelector(`option[value="${products[0]._id}"]`);
+              if (option) {
+                option.selected = true;
+                console.log('Auto-selected product:', products[0].name);
+
+                // Force update the amount calculation with a slight delay
+                setTimeout(() => {
+                  console.log('Delayed update for single product');
+                  const price = parseFloat(products[0].price);
+                  const quantity = parseInt(quantityInput.value || 1);
+
+                  if (!isNaN(price) && !isNaN(quantity)) {
+                    const amount = price * quantity;
+                    amountInput.value = '₹' + amount.toFixed(2);
+                    console.log(`Set amount to: ₹${amount.toFixed(2)}`);
+
+                    // Update total amount
+                    calculateTotalAmount();
+
+                    // Also directly update the total amount display
+                    const totalAmountElement = document.getElementById('totalAmount');
+                    if (totalAmountElement) {
+                      totalAmountElement.textContent = '₹' + amount.toFixed(2);
+                      console.log(`Auto-select: Set total amount to: ₹${amount.toFixed(2)}`);
+                    }
+
+                    // Update paid amount input
+                    const paidAmountInput = document.getElementById('paidAmount');
+                    if (paidAmountInput) {
+                      paidAmountInput.setAttribute('max', amount.toFixed(2));
+                      paidAmountInput.value = amount.toFixed(2);
+                    }
+                  }
+                }, 100);
+              }
+            }
+
+            // Add event listener to update amount when product changes
+            productSelect.addEventListener('change', function() {
+              console.log('Product selection changed');
+              // Use the direct function to update amount
+              const row = this.closest('.product-row');
+              if (row) {
+                const quantityInput = row.querySelector('.quantity-input');
+                const amountInput = row.querySelector('.product-amount');
+
+                if (this.selectedIndex > 0 && quantityInput) {
+                  const selectedOption = this.options[this.selectedIndex];
+                  const price = parseFloat(selectedOption.dataset.price);
+                  const quantity = parseInt(quantityInput.value || 1);
+
+                  if (!isNaN(price) && !isNaN(quantity)) {
+                    const amount = price * quantity;
+                    amountInput.value = '₹' + amount.toFixed(2);
+                    console.log(`Set amount to: ₹${amount.toFixed(2)}`);
+
+                    // Update total amount
+                    calculateTotalAmount();
+
+                    // Also directly update the total amount display
+                    const totalAmountElement = document.getElementById('totalAmount');
+                    if (totalAmountElement) {
+                      // Calculate total from all rows
+                      let total = 0;
+                      document.querySelectorAll('.product-row').forEach(r => {
+                        const ps = r.querySelector('.product-select');
+                        const qi = r.querySelector('.quantity-input');
+
+                        if (ps && ps.selectedIndex > 0) {
+                          const so = ps.options[ps.selectedIndex];
+                          const p = parseFloat(so.dataset.price);
+                          const q = parseInt(qi.value || 1);
+
+                          if (!isNaN(p) && !isNaN(q)) {
+                            total += p * q;
+                          }
+                        }
+                      });
+
+                      totalAmountElement.textContent = '₹' + total.toFixed(2);
+                      console.log(`Direct update: Set total amount to: ₹${total.toFixed(2)}`);
+
+                      // Update paid amount input
+                      const paidAmountInput = document.getElementById('paidAmount');
+                      if (paidAmountInput) {
+                        paidAmountInput.setAttribute('max', total.toFixed(2));
+                        // Only set the value if the user hasn't manually edited it
+                        if (!userEditedPaidAmount) {
+                          paidAmountInput.value = total.toFixed(2);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            });
+
+            // Add event listener to update amount when quantity changes
+            quantityInput.addEventListener('input', function() {
+              console.log('Quantity input changed');
+              // Use the direct function to update amount
+              const row = this.closest('.product-row');
+              if (row) {
+                const productSelect = row.querySelector('.product-select');
+                const amountInput = row.querySelector('.product-amount');
+
+                if (productSelect && productSelect.selectedIndex > 0) {
+                  const selectedOption = productSelect.options[productSelect.selectedIndex];
+                  const price = parseFloat(selectedOption.dataset.price);
+                  const quantity = parseInt(this.value || 1);
+
+                  if (!isNaN(price) && !isNaN(quantity)) {
+                    const amount = price * quantity;
+                    amountInput.value = '₹' + amount.toFixed(2);
+                    console.log(`Set amount to: ₹${amount.toFixed(2)}`);
+
+                    // Update total amount
+                    calculateTotalAmount();
+
+                    // Also directly update the total amount display
+                    const totalAmountElement = document.getElementById('totalAmount');
+                    if (totalAmountElement) {
+                      // Calculate total from all rows
+                      let total = 0;
+                      document.querySelectorAll('.product-row').forEach(r => {
+                        const ps = r.querySelector('.product-select');
+                        const qi = r.querySelector('.quantity-input');
+
+                        if (ps && ps.selectedIndex > 0) {
+                          const so = ps.options[ps.selectedIndex];
+                          const p = parseFloat(so.dataset.price);
+                          const q = parseInt(qi.value || 1);
+
+                          if (!isNaN(p) && !isNaN(q)) {
+                            total += p * q;
+                          }
+                        }
+                      });
+
+                      totalAmountElement.textContent = '₹' + total.toFixed(2);
+                      console.log(`Direct update: Set total amount to: ₹${total.toFixed(2)}`);
+
+                      // Update paid amount input
+                      const paidAmountInput = document.getElementById('paidAmount');
+                      if (paidAmountInput) {
+                        paidAmountInput.setAttribute('max', total.toFixed(2));
+                        // Only set the value if the user hasn't manually edited it
+                        if (!userEditedPaidAmount) {
+                          paidAmountInput.value = total.toFixed(2);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            });
+
+            // Also add change event listener for quantity
+            quantityInput.addEventListener('change', function() {
+              console.log('Quantity changed');
+              // Use the direct function to update amount
+              const row = this.closest('.product-row');
+              if (row) {
+                const productSelect = row.querySelector('.product-select');
+                const amountInput = row.querySelector('.product-amount');
+
+                if (productSelect && productSelect.selectedIndex > 0) {
+                  const selectedOption = productSelect.options[productSelect.selectedIndex];
+                  const price = parseFloat(selectedOption.dataset.price);
+                  const quantity = parseInt(this.value || 1);
+
+                  if (!isNaN(price) && !isNaN(quantity)) {
+                    const amount = price * quantity;
+                    amountInput.value = '₹' + amount.toFixed(2);
+                    console.log(`Set amount to: ₹${amount.toFixed(2)}`);
+
+                    // Update total amount
+                    calculateTotalAmount();
+
+                    // Also directly update the total amount display
+                    const totalAmountElement = document.getElementById('totalAmount');
+                    if (totalAmountElement) {
+                      // Calculate total from all rows
+                      let total = 0;
+                      document.querySelectorAll('.product-row').forEach(r => {
+                        const ps = r.querySelector('.product-select');
+                        const qi = r.querySelector('.quantity-input');
+
+                        if (ps && ps.selectedIndex > 0) {
+                          const so = ps.options[ps.selectedIndex];
+                          const p = parseFloat(so.dataset.price);
+                          const q = parseInt(qi.value || 1);
+
+                          if (!isNaN(p) && !isNaN(q)) {
+                            total += p * q;
+                          }
+                        }
+                      });
+
+                      totalAmountElement.textContent = '₹' + total.toFixed(2);
+                      console.log(`Direct update: Set total amount to: ₹${total.toFixed(2)}`);
+
+                      // Update paid amount input
+                      const paidAmountInput = document.getElementById('paidAmount');
+                      if (paidAmountInput) {
+                        paidAmountInput.setAttribute('max', total.toFixed(2));
+                        // Only set the value if the user hasn't manually edited it
+                        if (!userEditedPaidAmount) {
+                          paidAmountInput.value = total.toFixed(2);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            });
+          })
+          .catch(error => {
+            console.error('Fetch products error:', error);
+
+            // Try one more time with a direct fetch to the original endpoint
+            console.log('Trying direct fetch as last resort...');
+            fetch(`/api/products/category/${category}`)
+              .then(response => response.json())
+              .then(products => {
+                if (products && products.length > 0) {
+                  console.log('Direct fetch succeeded:', products);
+
+                  // Process products as normal
+                  productSelect.innerHTML = '<option value="" selected disabled>Select Product</option>';
+                  productSelect.disabled = false;
+
+                  // Add products to select
+                  products.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product._id;
+
+                    // Show quantity in the option text
+                    const quantity = product.quantity || 0;
+                    const lowStock = quantity <= 5;
+
+                    option.textContent = `${product.name} - ₹${product.price.toFixed(2)} (${quantity} in stock${lowStock ? ' - LOW STOCK' : ''})`;
+                    option.dataset.price = product.price;
+                    option.dataset.quantity = quantity;
+
+                    productSelect.appendChild(option);
+                  });
+
+                  // If there's only one product, select it automatically
+                  if (products.length === 1) {
+                    const option = productSelect.querySelector(`option[value="${products[0]._id}"]`);
+                    if (option) {
+                      option.selected = true;
+
+                      // Force update the amount calculation
+                      setTimeout(() => {
+                        const price = parseFloat(products[0].price);
+                        const quantity = parseInt(quantityInput.value || 1);
+
+                        if (!isNaN(price) && !isNaN(quantity)) {
+                          const amount = price * quantity;
+                          amountInput.value = '₹' + amount.toFixed(2);
+
+                          // Update total amount
+                          calculateTotalAmount();
+
+                          // Also directly update the total amount display
+                          const totalAmountElement = document.getElementById('totalAmount');
+                          if (totalAmountElement) {
+                            totalAmountElement.textContent = '₹' + amount.toFixed(2);
+                            console.log(`Auto-select: Set total amount to: ₹${amount.toFixed(2)}`);
+                          }
+
+                          // Update paid amount input
+                          const paidAmountInput = document.getElementById('paidAmount');
+                          if (paidAmountInput) {
+                            paidAmountInput.setAttribute('max', amount.toFixed(2));
+                            // Only set the value if the user hasn't manually edited it
+                            if (!userEditedPaidAmount) {
+                              paidAmountInput.value = amount.toFixed(2);
+                            }
+                          }
+                        }
+                      }, 100);
+                    }
+                  }
+                } else {
+                  throw new Error('No products found');
+                }
+              })
+              .catch(finalError => {
+                console.error('Final fetch attempt failed:', finalError);
+                console.log('Setting product options to empty state due to error');
+                // Add a default option that indicates the error
+                productSelect.innerHTML = '<option value="" selected disabled>Failed to load products</option>';
+                productSelect.disabled = true;
+              });
+          });
+      });
+
+      // Add event listener to remove button
+      const removeBtn = productRow.querySelector('.remove-product-btn');
+      removeBtn.addEventListener('click', function() {
+        productRow.remove();
+
+        // Update field names after removing a row
+        updateProductFieldNames();
+
+        // Recalculate total amount after removing a product
+        calculateTotalAmount();
+      });
+    };
+
+    // Add first product row
+    addProductRow();
+
+    // Initialize field names
+    updateProductFieldNames();
+
+    // DIRECT FIX: Add immediate event listeners to all product selects
+    setTimeout(() => {
+      document.querySelectorAll('.product-select').forEach(select => {
+        // Add a direct event listener
+        select.addEventListener('change', function() {
+          console.log('DIRECT FIX: Product select changed');
+
+          // Calculate total immediately
+          const productRows = document.querySelectorAll('.product-row');
+          let total = 0;
+
+          productRows.forEach(row => {
+            const ps = row.querySelector('.product-select');
+            const qi = row.querySelector('.quantity-input');
+            const ai = row.querySelector('.product-amount');
+
+            if (ps && ps.selectedIndex > 0) {
+              const so = ps.options[ps.selectedIndex];
+              const p = parseFloat(so.dataset.price || so.getAttribute('data-price'));
+              const q = parseInt(qi.value || 1);
+
+              if (!isNaN(p) && !isNaN(q)) {
+                const rowAmount = p * q;
+                ai.value = '₹' + rowAmount.toFixed(2);
+                total += rowAmount;
+              }
+            }
+          });
+
+          // Update total amount display
+          const totalAmountElement = document.getElementById('totalAmount');
+          if (totalAmountElement) {
+            totalAmountElement.textContent = '₹' + total.toFixed(2);
+            console.log('DIRECT FIX: Total amount updated to:', total.toFixed(2));
+          }
+
+          // Update paid amount input
+          const paidAmountInput = document.getElementById('paidAmount');
+          if (paidAmountInput) {
+            // Only update the value if the user hasn't manually edited it
+            if (!userEditedPaidAmount) {
+              paidAmountInput.value = total.toFixed(2);
+              console.log('Setting initial paid amount to total:', total.toFixed(2));
+            } else if (userPaidAmount !== null) {
+              // If user has edited, keep their value (but cap at total if it exceeds)
+              if (userPaidAmount > total) {
+                paidAmountInput.value = total.toFixed(2);
+                userPaidAmount = total;
+                console.log('Capping user paid amount to total:', total.toFixed(2));
+              } else {
+                // Keep the user's value
+                paidAmountInput.value = userPaidAmount.toFixed(2);
+                console.log('Preserving user paid amount:', userPaidAmount.toFixed(2));
+              }
+            }
+          }
+        });
+      });
+    }, 500);
+
+    // Add global event listener for quantity inputs to ensure they update
+    document.addEventListener('click', function(e) {
+      if (e.target && e.target.classList.contains('quantity-input')) {
+        const row = e.target.closest('.product-row');
+        if (row) {
+          const productSelect = row.querySelector('.product-select');
+          const amountInput = row.querySelector('.product-amount');
+          updateProductAmount(productSelect, e.target, amountInput);
+        }
+      }
+    });
+
+    // Add product row on button click
+    addProductBtn.addEventListener('click', function() {
+      addProductRow();
+
+      // Update name attributes to ensure they're unique
+      updateProductFieldNames();
+
+      // Recalculate total amount after adding a new product row
+      setTimeout(calculateTotalAmount, 100);
+    });
+
+    // Function to update product field names
+    const updateProductFieldNames = () => {
+      const productRows = document.querySelectorAll('.product-row');
+
+      productRows.forEach((row, index) => {
+        const productSelect = row.querySelector('.product-select');
+        const quantityInput = row.querySelector('.quantity-input');
+
+        // Update names to include index
+        if (productSelect) {
+          productSelect.name = `productIds[]`;
+        }
+
+        if (quantityInput) {
+          quantityInput.name = `quantities[]`;
+        }
+      });
+    };
+
+    // Get reference to the paid amount input
+    const paidAmountInput = document.getElementById('paidAmount');
+    const paidAmountDisplay = document.getElementById('paidAmountDisplay');
+
+    // Add dedicated event listeners to the paid amount input to ensure it captures all user edits
+    if (paidAmountDisplay) {
+      // Input event - fires when the value changes
+      paidAmountDisplay.addEventListener('input', function() {
+        userEditedPaidAmount = true;
+        userPaidAmount = parseFloat(this.value) || 0;
+        console.log('User edited paid amount to:', userPaidAmount);
+
+        // Update the hidden input
+        if (paidAmountInput) {
+          paidAmountInput.value = userPaidAmount;
+        }
+      });
+
+      // Focus event - fires when the field gets focus
+      paidAmountDisplay.addEventListener('focus', function() {
+        // Store the current value when the field gets focus
+        const currentValue = parseFloat(this.value) || 0;
+        if (!userEditedPaidAmount) {
+          userPaidAmount = currentValue;
+        }
+      });
+
+      // Blur event - fires when the field loses focus
+      paidAmountDisplay.addEventListener('blur', function() {
+        if (this.value.trim() === '') {
+          this.value = '0.00';
+          userPaidAmount = 0;
+
+          // Update the hidden input
+          if (paidAmountInput) {
+            paidAmountInput.value = '0.00';
+          }
+        }
+      });
+    }
+
+    // GST related event listeners
+    if (gstEnabledCheckbox) {
+      console.log('GST checkbox found, setting up event listeners');
+
+      // Fetch GST rates when the page loads
+      fetchGstRates();
+
+      // Toggle GST fields visibility when checkbox changes
+      gstEnabledCheckbox.addEventListener('change', function() {
+        console.log('GST checkbox changed, checked:', this.checked);
+
+        if (this.checked) {
+          console.log('Showing GST fields');
+          gstTypeContainer.style.display = 'block';
+          gstPercentageContainer.style.display = 'block';
+          gstAmountContainer.style.display = 'block';
+          gstRow.style.display = 'flex';
+
+          // If we don't have any GST rates yet, fetch them
+          if (gstRates.length === 0) {
+            console.log('No GST rates loaded yet, fetching them now');
+            fetchGstRates();
+
+            // Set default values in case API call fails
+            const gstPercentageInput = document.getElementById('gstPercentage');
+            if (gstPercentageInput) {
+              gstPercentageInput.value = '12';
+            }
+
+            // Create a default rate object
+            selectedGstRate = {
+              type: 'CGST+SGST 12%',
+              percentage: 12
+            };
+
+            // Update GST display in the total section
+            document.getElementById('gstDisplayType').textContent = 'CGST+SGST 12%';
+            document.getElementById('gstDisplayPercentage').textContent = '12';
+
+            // Calculate GST amount
+            calculateGstAmount();
+          }
+
+          // If we have a selected GST rate, calculate GST amount
+          if (selectedGstRate) {
+            console.log('Using previously selected GST rate:', selectedGstRate);
+            calculateGstAmount();
+          } else if (gstTypeSelect && gstTypeSelect.value) {
+            // Get the selected GST rate from the dropdown
+            console.log('Getting GST rate from dropdown selection');
+            const selectedOption = gstTypeSelect.options[gstTypeSelect.selectedIndex];
+            const rateId = gstTypeSelect.value;
+            console.log('Selected GST rate ID:', rateId);
+            const rate = gstRates.find(r => r._id === rateId);
+            if (rate) {
+              console.log('Found matching GST rate:', rate);
+              updateGstPercentage(rate);
+            } else {
+              console.log('No matching GST rate found for ID:', rateId);
+              // If no matching rate but we have rates, use the first one
+              if (gstRates.length > 0) {
+                console.log('Using first available GST rate instead:', gstRates[0]);
+                gstTypeSelect.value = gstRates[0]._id;
+                updateGstPercentage(gstRates[0]);
+              } else {
+                // No rates available, use default values
+                const gstPercentageInput = document.getElementById('gstPercentage');
+                if (gstPercentageInput) {
+                  gstPercentageInput.value = '12';
+                }
+
+                // Create a default rate object
+                selectedGstRate = {
+                  type: 'CGST+SGST 12%',
+                  percentage: 12
+                };
+
+                // Update GST display in the total section
+                document.getElementById('gstDisplayType').textContent = 'CGST+SGST 12%';
+                document.getElementById('gstDisplayPercentage').textContent = '12';
+
+                // Calculate GST amount
+                calculateGstAmount();
+              }
+            }
+          } else if (gstRates.length > 0) {
+            // No selection but we have rates, select the first one
+            console.log('No GST rate selected, using first available:', gstRates[0]);
+            if (gstTypeSelect) {
+              gstTypeSelect.value = gstRates[0]._id;
+              updateGstPercentage(gstRates[0]);
+            }
+          } else {
+            // No rates available, use default values
+            const gstPercentageInput = document.getElementById('gstPercentage');
+            if (gstPercentageInput) {
+              gstPercentageInput.value = '12';
+            }
+
+            // Create a default rate object
+            selectedGstRate = {
+              type: 'CGST+SGST 12%',
+              percentage: 12
+            };
+
+            // Update GST display in the total section
+            document.getElementById('gstDisplayType').textContent = 'CGST+SGST 12%';
+            document.getElementById('gstDisplayPercentage').textContent = '12';
+
+            // Calculate GST amount
+            calculateGstAmount();
+          }
+        } else {
+          console.log('Hiding GST fields');
+          gstTypeContainer.style.display = 'none';
+          gstPercentageContainer.style.display = 'none';
+          gstAmountContainer.style.display = 'none';
+          gstRow.style.display = 'none';
+
+          // Update total amount without GST
+          const totalAmountElement = document.getElementById('totalAmount');
+          if (totalAmountElement) {
+            totalAmountElement.textContent = '₹' + subtotal.toFixed(2);
+            console.log('Updated total amount to subtotal:', subtotal.toFixed(2));
+
+            // Update paid amount
+            if (paidAmountInput && paidAmountDisplay) {
+              if (!userEditedPaidAmount) {
+                paidAmountInput.value = subtotal.toFixed(2);
+                paidAmountDisplay.value = subtotal.toFixed(2);
+                console.log('Updated paid amount to subtotal:', subtotal.toFixed(2));
+              } else {
+                // Cap at subtotal if needed
+                const valueToSet = Math.min(userPaidAmount, subtotal);
+                paidAmountInput.value = valueToSet.toFixed(2);
+                paidAmountDisplay.value = valueToSet.toFixed(2);
+                console.log('Updated paid amount to user value (capped):', valueToSet.toFixed(2));
+              }
+            }
+          }
+        }
+      });
+
+      // Update GST percentage when GST type changes
+      if (gstTypeSelect) {
+        console.log('Setting up GST type select change listener');
+        gstTypeSelect.addEventListener('change', function() {
+          console.log('GST type selection changed');
+          const rateId = this.value;
+          console.log('Selected GST rate ID:', rateId);
+          const rate = gstRates.find(r => r._id === rateId);
+          if (rate) {
+            console.log('Found matching GST rate:', rate);
+            updateGstPercentage(rate);
+          } else {
+            console.log('No matching GST rate found for ID:', rateId);
+          }
+        });
+      }
+    }
+
+    // Set the paid amount to the total amount when the total changes (only if user hasn't edited it)
+    function updatePaidAmount() {
+      const totalAmountElement = document.getElementById('totalAmount');
+      const totalText = totalAmountElement.textContent;
+      const totalValue = parseFloat(totalText.replace('₹', ''));
+
+      if (!isNaN(totalValue) && paidAmountInput) {
+        // Only update the value if the user hasn't manually edited it
+        if (!userEditedPaidAmount) {
+          paidAmountInput.value = totalValue.toFixed(2);
+          console.log('Initial paid amount set to total:', totalValue.toFixed(2));
+        } else if (userPaidAmount !== null) {
+          // If user has edited, keep their value (but cap at total if it exceeds)
+          if (userPaidAmount > totalValue) {
+            paidAmountInput.value = totalValue.toFixed(2);
+            userPaidAmount = totalValue;
+            console.log('Capping user paid amount to total:', totalValue.toFixed(2));
+          } else {
+            // Keep the user's value
+            paidAmountInput.value = userPaidAmount.toFixed(2);
+            console.log('Keeping user paid amount:', userPaidAmount.toFixed(2));
+          }
+        }
+      }
+    }
+
+    // Update paid amount when the page loads
+    setTimeout(updatePaidAmount, 500);
+
+    // Get references to customer search elements
+    const customerSearchInput = document.getElementById('customerSearch');
+    const searchCustomerBtn = document.getElementById('searchCustomerBtn');
+    const customerSearchResults = document.getElementById('customerSearchResults');
+
+    // Function to fill customer details
+    const fillCustomerDetails = (customer) => {
+      customerNameInput.value = customer.name;
+      customerPhoneInput.value = customer.phone;
+      customerPlaceInput.value = customer.place;
+
+      // Hide search results
+      customerSearchResults.style.display = 'none';
+    };
+
+    // Function to perform customer search
+    const searchCustomers = () => {
+      const query = customerSearchInput.value.trim();
+
+      if (query.length < 2) {
+        customerSearchResults.style.display = 'none';
+        return;
+      }
+
+      // Show loading indicator
+      customerSearchResults.innerHTML = '<div class="list-group-item">Searching...</div>';
+      customerSearchResults.style.display = 'block';
+
+      // Log the search URL for debugging
+      console.log('Search URL:', `/api/customers/search?query=${encodeURIComponent(query)}`);
+
+      fetch(`/api/customers/search?query=${encodeURIComponent(query)}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(customers => {
+          console.log('Search results:', customers);
+          customerSearchResults.innerHTML = '';
+
+          if (!customers || customers.length === 0) {
+            customerSearchResults.innerHTML = '<div class="list-group-item">No customers found</div>';
+          } else {
+            customers.forEach(customer => {
+              const item = document.createElement('a');
+              item.href = '#';
+              item.className = 'list-group-item list-group-item-action';
+              item.innerHTML = `<strong>${customer.name}</strong> - ${customer.phone} (${customer.place})`;
+
+              item.addEventListener('click', (e) => {
+                e.preventDefault();
+                fillCustomerDetails(customer);
+              });
+
+              customerSearchResults.appendChild(item);
+            });
+          }
+
+          customerSearchResults.style.display = 'block';
+        })
+        .catch(error => {
+          console.error('Customer search error:', error);
+          customerSearchResults.innerHTML = `<div class="list-group-item text-danger">Error: ${error.message}</div>`;
+        });
+    };
+
+    // Search on button click
+    searchCustomerBtn.addEventListener('click', searchCustomers);
+
+    // Search on Enter key press
+    customerSearchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault(); // Prevent form submission
+        searchCustomers();
+      }
+    });
+
+    // Search as you type (with debounce)
+    let searchTimeout;
+    customerSearchInput.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(searchCustomers, 300);
+    });
+
+    // Also keep the phone blur functionality for direct phone entry
+    customerPhoneInput.addEventListener('blur', function() {
+      const phone = this.value.trim();
+
+      if (phone.length > 0) {
+        console.log('Searching by phone:', phone);
+
+        fetch(`/api/customers/search?query=${encodeURIComponent(phone)}`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(customers => {
+            console.log('Phone search results:', customers);
+
+            if (customers && customers.length > 0) {
+              const customer = customers[0];
+              console.log('Found customer:', customer);
+              customerNameInput.value = customer.name;
+              customerPlaceInput.value = customer.place;
+            }
+          })
+          .catch(error => {
+            console.error('Customer search by phone error:', error);
+          });
+      }
+    });
+
+    // Function to update product amount
+    const updateProductAmount = (productSelect, quantityInput, amountInput) => {
+      console.log('Updating product amount');
+      console.log('Product select index:', productSelect.selectedIndex);
+      console.log('Quantity value:', quantityInput.value);
+
+      // CRITICAL FIX: Always use a default quantity of 1 if empty
+      if (productSelect.selectedIndex > 0) {
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
+        const price = parseFloat(selectedOption.dataset.price);
+        const quantity = parseInt(quantityInput.value || 1); // Default to 1 if empty
+        const availableQuantity = parseInt(selectedOption.dataset.quantity || 0);
+
+        console.log('Price:', price);
+        console.log('Quantity:', quantity);
+        console.log('Available quantity:', availableQuantity);
+
+        // Validate quantity against available stock
+        if (quantity > availableQuantity) {
+          alert(`Only ${availableQuantity} units available in stock for ${selectedOption.textContent.split(' - ')[0]}`);
+          quantityInput.value = availableQuantity;
+          // Recalculate with the adjusted quantity
+          const adjustedQuantity = parseInt(quantityInput.value);
+          const amount = price * adjustedQuantity;
+          amountInput.value = '₹' + amount.toFixed(2);
+        } else if (!isNaN(price) && !isNaN(quantity)) {
+          const amount = price * quantity;
+          console.log('Calculated amount:', amount);
+          amountInput.value = '₹' + amount.toFixed(2);
+        } else {
+          console.log('Price or quantity is NaN');
+          amountInput.value = '';
+        }
+
+        // Update total amount
+        calculateTotalAmount();
+
+        // CRITICAL FIX: Force direct update of total amount
+        setTimeout(() => {
+          // Get all product rows
+          const productRows = document.querySelectorAll('.product-row');
+          let total = 0;
+
+          productRows.forEach(row => {
+            const ps = row.querySelector('.product-select');
+            const qi = row.querySelector('.quantity-input');
+
+            if (ps && ps.selectedIndex > 0) {
+              const so = ps.options[ps.selectedIndex];
+              const p = parseFloat(so.dataset.price);
+              const q = parseInt(qi.value || 1); // Default to 1 if empty
+
+              if (!isNaN(p) && !isNaN(q)) {
+                total += p * q;
+              }
+            }
+          });
+
+          // Update total amount display
+          const totalAmountElement = document.getElementById('totalAmount');
+          if (totalAmountElement) {
+            totalAmountElement.textContent = '₹' + total.toFixed(2);
+            console.log(`CRITICAL FIX: Set total amount to: ₹${total.toFixed(2)}`);
+          }
+
+          // Update paid amount input
+          const paidAmountInput = document.getElementById('paidAmount');
+          if (paidAmountInput) {
+            paidAmountInput.setAttribute('max', total.toFixed(2));
+            paidAmountInput.value = total.toFixed(2);
+          }
+        }, 50);
+      } else {
+        console.log('Product not selected');
+        amountInput.value = '';
+        calculateTotalAmount();
+      }
+    };
+
+    // Function to calculate total amount
+    const calculateTotalAmount = () => {
+      console.log('Calculating total amount...');
+      const productRows = document.querySelectorAll('.product-row');
+      let total = 0;
+
+      productRows.forEach((row, index) => {
+        const productSelect = row.querySelector('.product-select');
+        const quantityInput = row.querySelector('.quantity-input');
+        const amountInput = row.querySelector('.product-amount');
+
+        if (productSelect && productSelect.selectedIndex > 0) {
+          const selectedOption = productSelect.options[productSelect.selectedIndex];
+          const price = parseFloat(selectedOption.dataset.price);
+          const quantity = parseInt(quantityInput.value || 1); // CRITICAL FIX: Default to 1 if empty
+
+          console.log(`Row ${index + 1} calculation:`, {
+            product: selectedOption.textContent,
+            price,
+            quantity
+          });
+
+          if (!isNaN(price) && !isNaN(quantity)) {
+            const rowTotal = price * quantity;
+            total += rowTotal;
+            console.log(`Row ${index + 1} total: ${rowTotal}, Running total: ${total}`);
+
+            // Update the row amount display
+            amountInput.value = '₹' + rowTotal.toFixed(2);
+          }
+        }
+      });
+
+      // Update total amount display
+      const totalAmountElement = document.getElementById('totalAmount');
+      if (totalAmountElement) {
+        totalAmountElement.textContent = '₹' + total.toFixed(2);
+        console.log(`Updated total amount display to: ${total.toFixed(2)}`);
+      }
+
+      // Update paid amount input
+      const paidAmountInput = document.getElementById('paidAmount');
+
+      // Update max value for paid amount input
+      if (paidAmountInput) {
+        paidAmountInput.setAttribute('max', total.toFixed(2));
+
+        // Set the value to the total by default
+        paidAmountInput.value = total.toFixed(2);
+        console.log(`Updated paid amount input to: ${total.toFixed(2)}`);
+      }
+
+      // CRITICAL FIX: Force update the total amount display again
+      setTimeout(() => {
+        const totalElement = document.getElementById('totalAmount');
+        if (totalElement && totalElement.textContent === '₹' + '0.00' && total > 0) {
+          totalElement.textContent = '₹' + total.toFixed(2);
+          console.log(`CRITICAL FIX: Forced total amount update to: ${total.toFixed(2)}`);
+
+          // Also update paid amount
+          if (paidAmountInput) {
+            paidAmountInput.value = total.toFixed(2);
+          }
+        }
+      }, 50);
+
+      return total;
+    };
+
+    // Initialize all amounts on page load
+    setTimeout(() => {
+      console.log('Initializing all amounts on page load');
+
+      // First, update all product amounts
+      document.querySelectorAll('.product-row').forEach(row => {
+        const productSelect = row.querySelector('.product-select');
+        const quantityInput = row.querySelector('.quantity-input');
+        const amountInput = row.querySelector('.product-amount');
+
+        if (productSelect && productSelect.selectedIndex > 0 && quantityInput && quantityInput.value) {
+          const selectedOption = productSelect.options[productSelect.selectedIndex];
+          const price = parseFloat(selectedOption.dataset.price);
+          const quantity = parseInt(quantityInput.value);
+
+          if (!isNaN(price) && !isNaN(quantity)) {
+            const amount = price * quantity;
+            amountInput.value = '₹' + amount.toFixed(2);
+            console.log(`Set amount to: ₹${amount.toFixed(2)}`);
+          }
+        }
+      });
+
+      // Then calculate the total
+      calculateTotalAmount();
+
+      // Force a direct calculation of the total amount
+      const productRows = document.querySelectorAll('.product-row');
+      let total = 0;
+
+      productRows.forEach(row => {
+        const productSelect = row.querySelector('.product-select');
+        const quantityInput = row.querySelector('.quantity-input');
+
+        if (productSelect && productSelect.selectedIndex > 0 && quantityInput && quantityInput.value) {
+          const selectedOption = productSelect.options[productSelect.selectedIndex];
+          const price = parseFloat(selectedOption.dataset.price);
+          const quantity = parseInt(quantityInput.value);
+
+          console.log('Direct calculation:', { price, quantity });
+
+          if (!isNaN(price) && !isNaN(quantity)) {
+            const rowTotal = price * quantity;
+            total += rowTotal;
+            console.log(`Row total: ${rowTotal}, Running total: ${total}`);
+          }
+        }
+      });
+
+      // Update total amount display
+      const totalAmountElement = document.getElementById('totalAmount');
+      if (totalAmountElement) {
+        totalAmountElement.textContent = '₹' + total.toFixed(2);
+        console.log(`Directly set total amount to: ₹${total.toFixed(2)}`);
+      }
+
+      // Update paid amount input
+      const paidAmountInput = document.getElementById('paidAmount');
+      if (paidAmountInput) {
+        paidAmountInput.setAttribute('max', total.toFixed(2));
+        paidAmountInput.value = total.toFixed(2);
+      }
+    }, 1000);
+
+    // Form validation before submission
+    document.getElementById('billForm').addEventListener('submit', function(e) {
+      // DIRECT FIX: Force recalculation of total amount before submission
+      const productRows = document.querySelectorAll('.product-row');
+      let total = 0;
+
+      productRows.forEach(row => {
+        const productSelect = row.querySelector('.product-select');
+        const quantityInput = row.querySelector('.quantity-input');
+
+        if (productSelect && productSelect.selectedIndex > 0) {
+          const selectedOption = productSelect.options[productSelect.selectedIndex];
+          const price = parseFloat(selectedOption.dataset.price || selectedOption.getAttribute('data-price'));
+          const quantity = parseInt(quantityInput.value || 1);
+
+          if (!isNaN(price) && !isNaN(quantity)) {
+            total += price * quantity;
+          }
+        }
+      });
+
+      // Update total amount display
+      let formTotalElement = document.getElementById('totalAmount');
+      if (formTotalElement) {
+        formTotalElement.textContent = '₹' + total.toFixed(2);
+        console.log('FORM SUBMISSION: Total amount set to:', total.toFixed(2));
+      }
+
+      // Update paid amount input
+      let formPaidAmountInput = document.getElementById('paidAmount');
+      if (formPaidAmountInput) {
+        formPaidAmountInput.setAttribute('max', total.toFixed(2));
+        // Only set the value if it's empty or exceeds the total
+        if (!formPaidAmountInput.value || parseFloat(formPaidAmountInput.value) > total) {
+          formPaidAmountInput.value = total.toFixed(2);
+        }
+      }
+      // Check required customer fields
+      if (!customerNameInput.value.trim()) {
+        e.preventDefault();
+        alert('Please enter customer name');
+        customerNameInput.focus();
+        return false;
+      }
+
+      if (!customerPhoneInput.value.trim()) {
+        e.preventDefault();
+        alert('Please enter customer phone number');
+        customerPhoneInput.focus();
+        return false;
+      }
+
+      if (!customerPlaceInput.value.trim()) {
+        e.preventDefault();
+        alert('Please enter customer place');
+        customerPlaceInput.focus();
+        return false;
+      }
+
+      // Check work and picked by fields
+      const workInput = document.getElementById('work');
+      const pickedByInput = document.getElementById('pickedBy');
+
+      if (!workInput.value.trim()) {
+        e.preventDefault();
+        alert('Please enter work details');
+        workInput.focus();
+        return false;
+      }
+
+      if (!pickedByInput.value.trim()) {
+        e.preventDefault();
+        alert('Please enter who picked up the order');
+        pickedByInput.focus();
+        return false;
+      }
+
+      // Check if at least one product is selected
+      const productSelects = document.querySelectorAll('.product-select');
+      let hasSelectedProduct = false;
+      let emptySelectIndex = -1;
+
+      productSelects.forEach((select, index) => {
+        // Check if the select is visible (parent row is not hidden)
+        const row = select.closest('.product-row');
+        const isVisible = row && window.getComputedStyle(row).display !== 'none';
+
+        if (isVisible && !select.disabled) {
+          if (select.value) {
+            hasSelectedProduct = true;
+          } else if (emptySelectIndex === -1) {
+            emptySelectIndex = index;
+          }
+        }
+      });
+
+      if (!hasSelectedProduct) {
+        e.preventDefault();
+        alert('Please select at least one product');
+
+        // Focus on the first empty select
+        if (emptySelectIndex !== -1 && productSelects[emptySelectIndex]) {
+          productSelects[emptySelectIndex].focus();
+        }
+
+        return false;
+      }
+
+      // Check paid amount
+      if (!paidAmountInput.value) {
+        e.preventDefault();
+        alert('Please enter the paid amount');
+        paidAmountInput.focus();
+        return false;
+      }
+
+      // Ensure the paid amount is a valid number
+      const paidAmount = parseFloat(paidAmountInput.value);
+      if (isNaN(paidAmount)) {
+        e.preventDefault();
+        alert('Please enter a valid number for the paid amount');
+        paidAmountInput.focus();
+        return false;
+      }
+
+      // Ensure the paid amount doesn't exceed the total
+      let finalTotalElement = document.getElementById('totalAmount');
+      let finalTotalText = finalTotalElement.textContent;
+      let finalTotalValue = parseFloat(finalTotalText.replace('₹', ''));
+
+      if (paidAmount > finalTotalValue) {
+        e.preventDefault();
+        alert('Paid amount cannot exceed the total amount');
+        paidAmountInput.value = finalTotalValue.toFixed(2);
+        paidAmountInput.focus();
+        return false;
+      }
+
+      // All validations passed
+      return true;
+    });
+  });
+
+  // DIRECT FIX FOR PAID AMOUNT - This code runs after everything else
+  document.addEventListener('DOMContentLoaded', function() {
+    // Get references to our elements
+    const paidAmountDisplay = document.getElementById('paidAmountDisplay');
+    const actualPaidAmount = document.getElementById('actualPaidAmount');
+    const totalAmountElement = document.getElementById('totalAmount');
+    const paidAmountFeedback = document.getElementById('paidAmountFeedback');
+
+    // Flag to track if user has manually edited the amount
+    let userHasEditedAmount = false;
+
+    // Function to update the total amount
+    function updateTotalDisplay() {
+      if (totalAmountElement) {
+        const totalText = totalAmountElement.textContent;
+        const totalValue = parseFloat(totalText.replace('₹', ''));
+
+        if (!isNaN(totalValue)) {
+          // If user hasn't edited, set paid amount to total
+          if (!userHasEditedAmount) {
+            paidAmountDisplay.value = totalValue.toFixed(2);
+            actualPaidAmount.value = totalValue.toFixed(2);
+            console.log('Set paid amount to total:', totalValue.toFixed(2));
+          }
+        }
+      }
+    }
+
+    // Set initial value
+    setTimeout(updateTotalDisplay, 1000);
+
+    // Handle user input in the paid amount field
+    paidAmountDisplay.addEventListener('input', function() {
+      userHasEditedAmount = true;
+
+      // Get the total amount
+      const totalText = totalAmountElement.textContent;
+      const totalValue = parseFloat(totalText.replace('₹', ''));
+
+      // Get the entered amount
+      let enteredValue = this.value.trim();
+
+      // Allow empty field or partial input during typing
+      if (enteredValue === '' || enteredValue === '.' || /^\d+\.$/.test(enteredValue)) {
+        paidAmountFeedback.style.display = 'none';
+        this.classList.remove('is-invalid');
+        actualPaidAmount.value = '0';
+        return;
+      }
+
+      // Parse the entered value
+      const paidValue = parseFloat(enteredValue);
+
+      // Validate the input
+      if (isNaN(paidValue)) {
+        this.classList.add('is-invalid');
+        paidAmountFeedback.textContent = 'Please enter a valid number';
+        paidAmountFeedback.style.display = 'block';
+        return;
+      }
+
+      // Check if paid amount exceeds total
+      if (paidValue > totalValue) {
+        this.value = totalValue.toFixed(2);
+        actualPaidAmount.value = totalValue.toFixed(2);
+        this.classList.add('is-invalid');
+        paidAmountFeedback.textContent = 'Paid amount cannot exceed the total amount';
+        paidAmountFeedback.style.display = 'block';
+      } else {
+        // Valid input
+        actualPaidAmount.value = paidValue.toFixed(2);
+        this.classList.remove('is-invalid');
+        paidAmountFeedback.style.display = 'none';
+      }
+    });
+
+    // Format the number when the field loses focus
+    paidAmountDisplay.addEventListener('blur', function() {
+      const value = parseFloat(this.value);
+      if (!isNaN(value)) {
+        this.value = value.toFixed(2);
+        actualPaidAmount.value = value.toFixed(2);
+      } else if (this.value.trim() === '') {
+        this.value = '0.00';
+        actualPaidAmount.value = '0.00';
+      }
+    });
+
+    // Override any other code that might try to change the paid amount
+    const originalSetAttribute = Element.prototype.setAttribute;
+    Element.prototype.setAttribute = function(name, value) {
+      // If this is the paid amount input and someone is trying to set its value
+      if (this === paidAmountDisplay && name === 'value' && userHasEditedAmount) {
+        console.log('Blocked attempt to change paid amount value to:', value);
+        return; // Block the change
+      }
+      // Otherwise, proceed normally
+      return originalSetAttribute.call(this, name, value);
+    };
+
+    // Also override the value setter for the paid amount input
+    let paidAmountDescriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    let originalValueSetter = paidAmountDescriptor.set;
+
+    Object.defineProperty(paidAmountDisplay, 'value', {
+      set: function(newValue) {
+        // If user has edited and some other code is trying to change it
+        if (userHasEditedAmount && newValue !== this.value &&
+            !document.activeElement === this) {
+          console.log('Blocked attempt to set paid amount to:', newValue);
+          return; // Block the change
+        }
+        // Otherwise, proceed normally
+        originalValueSetter.call(this, newValue);
+      },
+      get: paidAmountDescriptor.get
+    });
+
+    // Update the paid amount when the total changes
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.type === 'characterData' || mutation.type === 'childList') {
+          if (!userHasEditedAmount) {
+            updateTotalDisplay();
+          }
+        }
+      });
+    });
+
+    // Start observing the total amount element
+    if (totalAmountElement) {
+      observer.observe(totalAmountElement, {
+        characterData: true,
+        childList: true,
+        subtree: true
+      });
+    }
+
+    // Handle form submission
+    document.getElementById('billForm').addEventListener('submit', function(e) {
+      const paidValue = parseFloat(actualPaidAmount.value);
+      const totalText = totalAmountElement.textContent;
+      const totalValue = parseFloat(totalText.replace('₹', ''));
+
+      if (isNaN(paidValue)) {
+        e.preventDefault();
+        alert('Please enter a valid paid amount');
+        paidAmountDisplay.focus();
+        return false;
+      }
+
+      if (paidValue > totalValue) {
+        e.preventDefault();
+        alert('Paid amount cannot exceed the total amount');
+        paidAmountDisplay.focus();
+        return false;
+      }
+    });
+  });
+</script>
+
+<%- include('../partials/footer') %>
+
+<script>
+  // Immediate script to fix total amount calculation
+  // DIRECT FIX: Force update total amount immediately
+  function updateTotalNow() {
+    console.log('DIRECT FIX: Forcing immediate total update');
+    const rows = document.querySelectorAll('.product-row');
+    let total = 0;
+
+    rows.forEach(row => {
+      const select = row.querySelector('.product-select');
+      const quantity = row.querySelector('.quantity-input');
+      const amount = row.querySelector('.product-amount');
+
+      if (select && select.selectedIndex > 0) {
+        const option = select.options[select.selectedIndex];
+        const price = parseFloat(option.dataset.price || option.getAttribute('data-price'));
+        const qty = parseInt(quantity.value || 1);
+
+        if (!isNaN(price) && !isNaN(qty)) {
+          const rowTotal = price * qty;
+          amount.value = '₹' + rowTotal.toFixed(2);
+          total += rowTotal;
+        }
+      }
+    });
+
+    const totalElement = document.getElementById('totalAmount');
+    if (totalElement) {
+      totalElement.textContent = '₹' + total.toFixed(2);
+      console.log('DIRECT UPDATE: Total set to ' + total.toFixed(2));
+    }
+
+    const paidInput = document.getElementById('paidAmount');
+    if (paidInput) {
+      paidInput.setAttribute('max', total.toFixed(2));
+      paidInput.value = total.toFixed(2);
+    }
+  }
+
+  // Call the update function immediately
+  setTimeout(updateTotalNow, 100);
+  setTimeout(updateTotalNow, 500);
+  setTimeout(updateTotalNow, 1000);
+
+  // CRITICAL FIX: Add direct event listener to product select elements
+  document.addEventListener('click', function(event) {
+    // Check if we clicked on or near a product select
+    const productRow = event.target.closest('.product-row');
+    if (productRow) {
+      console.log('Clicked in product row, forcing update');
+      setTimeout(updateTotalNow, 50);
+    }
+  });
+
+  // CRITICAL FIX: Add MutationObserver to detect when products are loaded
+  const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+        // Check if any product selects were added
+        const productSelects = document.querySelectorAll('.product-select');
+        if (productSelects.length > 0) {
+          console.log('Product selects detected, forcing update');
+          setTimeout(updateTotalNow, 50);
+
+          // Add direct event listeners to all product selects
+          productSelects.forEach(select => {
+            if (!select.dataset.listenerAdded) {
+              select.dataset.listenerAdded = 'true';
+              select.addEventListener('change', function() {
+                console.log('Product select changed directly');
+                setTimeout(updateTotalNow, 50);
+              });
+            }
+          });
+        }
+      }
+    });
+  });
+
+  // Start observing the document
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Call the update function when DOM is loaded
+    updateTotalNow();
+    // IMMEDIATE FIX: Force update total amount as soon as the page loads
+    setTimeout(function() {
+      console.log('IMMEDIATE FIX: Forcing total amount update');
+      const productRows = document.querySelectorAll('.product-row');
+      let total = 0;
+
+      productRows.forEach(row => {
+        const productSelect = row.querySelector('.product-select');
+        const quantityInput = row.querySelector('.quantity-input');
+        const amountInput = row.querySelector('.product-amount');
+
+        if (productSelect && productSelect.selectedIndex > 0) {
+          const selectedOption = productSelect.options[productSelect.selectedIndex];
+          const price = parseFloat(selectedOption.dataset.price || selectedOption.getAttribute('data-price'));
+          const quantity = parseInt(quantityInput.value || 1);
+
+          console.log('Selected product:', selectedOption.textContent);
+          console.log('Price:', price);
+          console.log('Quantity:', quantity);
+
+          if (!isNaN(price) && !isNaN(quantity)) {
+            const amount = price * quantity;
+            amountInput.value = '₹' + amount.toFixed(2);
+            total += amount;
+            console.log('Row amount:', amount);
+          }
+        }
+      });
+
+      // Update total amount display
+      const totalAmountElement = document.getElementById('totalAmount');
+      if (totalAmountElement) {
+        totalAmountElement.textContent = '₹' + total.toFixed(2);
+        console.log('IMMEDIATE FIX: Total amount set to:', total.toFixed(2));
+      }
+
+      // Update paid amount input
+      const paidAmountInput = document.getElementById('paidAmount');
+      if (paidAmountInput) {
+        paidAmountInput.setAttribute('max', total.toFixed(2));
+        paidAmountInput.value = total.toFixed(2);
+      }
+    }, 100);
+
+    // Add a direct event listener to update total when a product is selected
+    document.addEventListener('change', function(e) {
+      if (e.target && (e.target.classList.contains('product-select') || e.target.classList.contains('quantity-input'))) {
+        console.log('Product or quantity changed, updating total immediately');
+        setTimeout(function() {
+          // Get all product rows
+          const productRows = document.querySelectorAll('.product-row');
+          let total = 0;
+
+          productRows.forEach(row => {
+            const productSelect = row.querySelector('.product-select');
+            const quantityInput = row.querySelector('.quantity-input');
+
+            if (productSelect && productSelect.selectedIndex > 0) {
+              const selectedOption = productSelect.options[productSelect.selectedIndex];
+              const price = parseFloat(selectedOption.dataset.price);
+              const quantity = parseInt(quantityInput.value || 1);
+
+              if (!isNaN(price) && !isNaN(quantity)) {
+                total += price * quantity;
+              }
+            }
+          });
+
+          // Update total amount display
+          const totalAmountElement = document.getElementById('totalAmount');
+          if (totalAmountElement) {
+            totalAmountElement.textContent = '₹' + total.toFixed(2);
+            console.log(`DIRECT EVENT: Set total amount to: ₹${total.toFixed(2)}`);
+          }
+
+          // Update paid amount input
+          const paidAmountInput = document.getElementById('paidAmount');
+          if (paidAmountInput) {
+            paidAmountInput.setAttribute('max', total.toFixed(2));
+            paidAmountInput.value = total.toFixed(2);
+          }
+        }, 50);
+      }
+    });
+
+    // Run this after a short delay to ensure all elements are loaded
+    setTimeout(function() {
+      console.log('Running immediate total amount fix...');
+
+      // Get all product rows
+      const productRows = document.querySelectorAll('.product-row');
+      let total = 0;
+
+      productRows.forEach(row => {
+        const productSelect = row.querySelector('.product-select');
+        const quantityInput = row.querySelector('.quantity-input');
+        const amountInput = row.querySelector('.product-amount');
+
+        if (productSelect && productSelect.selectedIndex > 0) {
+          const selectedOption = productSelect.options[productSelect.selectedIndex];
+          const price = parseFloat(selectedOption.dataset.price);
+          const quantity = parseInt(quantityInput.value || 1);
+
+          console.log('Found selected product:', {
+            name: selectedOption.textContent,
+            price: price,
+            quantity: quantity
+          });
+
+          if (!isNaN(price) && !isNaN(quantity)) {
+            const amount = price * quantity;
+            amountInput.value = '₹' + amount.toFixed(2);
+            total += amount;
+            console.log(`Added ${amount.toFixed(2)} to total, now: ${total.toFixed(2)}`);
+          }
+        }
+      });
+
+      // Update total amount display
+      const totalAmountElement = document.getElementById('totalAmount');
+      if (totalAmountElement) {
+        totalAmountElement.textContent = '₹' + total.toFixed(2);
+        console.log(`FIXED: Set total amount to: ₹${total.toFixed(2)}`);
+      }
+
+      // Update paid amount input
+      const paidAmountInput = document.getElementById('paidAmount');
+      if (paidAmountInput) {
+        paidAmountInput.setAttribute('max', total.toFixed(2));
+        paidAmountInput.value = total.toFixed(2);
+        console.log(`Set paid amount to: ${total.toFixed(2)}`);
+      }
+    }, 500);
+
+    // Add event listeners to all product selects to update total immediately
+    document.addEventListener('change', function(e) {
+      if (e.target && e.target.classList.contains('product-select')) {
+        console.log('Product select changed, updating total immediately');
+        setTimeout(updateTotalImmediately, 50);
+      }
+    });
+
+    // Function to immediately update total when a product is selected
+    function updateTotalImmediately() {
+      const productRows = document.querySelectorAll('.product-row');
+      let total = 0;
+
+      productRows.forEach(row => {
+        const productSelect = row.querySelector('.product-select');
+        const quantityInput = row.querySelector('.quantity-input');
+        const amountInput = row.querySelector('.product-amount');
+
+        if (productSelect && productSelect.selectedIndex > 0) {
+          const selectedOption = productSelect.options[productSelect.selectedIndex];
+          const price = parseFloat(selectedOption.dataset.price);
+          const quantity = parseInt(quantityInput.value || 1);
+
+          if (!isNaN(price) && !isNaN(quantity)) {
+            const amount = price * quantity;
+            amountInput.value = '₹' + amount.toFixed(2);
+            total += amount;
+            console.log(`Product change: Added ${amount.toFixed(2)} to total, now: ${total.toFixed(2)}`);
+          }
+        }
+      });
+
+      // Update total amount display
+      const totalAmountElement = document.getElementById('totalAmount');
+      if (totalAmountElement) {
+        totalAmountElement.textContent = '₹' + total.toFixed(2);
+        console.log(`Product change: Set total amount to: ₹${total.toFixed(2)}`);
+      }
+
+      // Update paid amount input
+      const paidAmountInput = document.getElementById('paidAmount');
+      if (paidAmountInput) {
+        paidAmountInput.setAttribute('max', total.toFixed(2));
+        paidAmountInput.value = total.toFixed(2);
+      }
+    }
+  });
+</script>
+
+<!-- EMERGENCY FIX: Direct script to update total amount -->
+<script>
+  // EMERGENCY FIX: Add direct script to update total amount
+  (function() {
+    // Add direct event listener to product selects
+    document.addEventListener('click', function(event) {
+      // Check if we clicked on or near a product select
+      if (event.target && (event.target.classList.contains('product-select') ||
+          event.target.closest('.product-row'))) {
+        console.log('EMERGENCY: Clicked near product, forcing update');
+        setTimeout(emergencyUpdateTotal, 50);
+      }
+    });
+
+    // Add direct event listener for changes
+    document.addEventListener('change', function(event) {
+      if (event.target && (event.target.classList.contains('product-select') ||
+          event.target.classList.contains('quantity-input'))) {
+        console.log('EMERGENCY: Product or quantity changed, forcing update');
+        setTimeout(emergencyUpdateTotal, 50);
+      }
+    });
+    console.log('EMERGENCY FIX: Running immediate total update');
+
+    function emergencyUpdateTotal() {
+      const rows = document.querySelectorAll('.product-row');
+      let total = 0;
+
+      rows.forEach(row => {
+        const select = row.querySelector('.product-select');
+        const quantity = row.querySelector('.quantity-input');
+
+        if (select && select.selectedIndex > 0) {
+          const option = select.options[select.selectedIndex];
+          const price = parseFloat(option.dataset.price || option.getAttribute('data-price'));
+          const qty = parseInt(quantity.value || 1);
+
+          if (!isNaN(price) && !isNaN(qty)) {
+            total += price * qty;
+          }
+        }
+      });
+
+      const totalElement = document.getElementById('totalAmount');
+      if (totalElement) {
+        totalElement.textContent = '₹' + total.toFixed(2);
+        console.log('EMERGENCY FIX: Total set to ' + total.toFixed(2));
+      }
+
+      const paidInput = document.getElementById('paidAmount');
+      if (paidInput) {
+        paidInput.setAttribute('max', total.toFixed(2));
+        paidInput.value = total.toFixed(2);
+      }
+    }
+
+    // Run multiple times to ensure it catches
+    setTimeout(emergencyUpdateTotal, 100);
+    setTimeout(emergencyUpdateTotal, 500);
+    setTimeout(emergencyUpdateTotal, 1000);
+    setTimeout(emergencyUpdateTotal, 2000);
+  })();
+</script>

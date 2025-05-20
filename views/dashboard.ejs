@@ -1,0 +1,159 @@
+<%- include('partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('partials/sidebar', { path: '/dashboard' }) %>
+    </div>
+
+    <!-- Main Content -->
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Dashboard</h1>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 col-lg-3 mb-4">
+          <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="text-uppercase">Create Bill</h6>
+                </div>
+                <i class="fas fa-file-invoice fa-2x"></i>
+              </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+              <a href="/bills/create" class="text-white text-decoration-none">Create New Bill</a>
+              <i class="fas fa-arrow-circle-right text-white"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 mb-4">
+          <div class="card bg-success text-white h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="text-uppercase">Manage Bills</h6>
+                </div>
+                <i class="fas fa-file-invoice-dollar fa-2x"></i>
+              </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+              <a href="/bills" class="text-white text-decoration-none">View All Bills</a>
+              <i class="fas fa-arrow-circle-right text-white"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 mb-4">
+          <div class="card bg-warning text-white h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="text-uppercase">Customers</h6>
+                </div>
+                <i class="fas fa-users fa-2x"></i>
+              </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+              <a href="/customers" class="text-white text-decoration-none">Manage Customers</a>
+              <i class="fas fa-arrow-circle-right text-white"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 mb-4">
+          <div class="card bg-danger text-white h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="text-uppercase">Products</h6>
+                </div>
+                <i class="fas fa-boxes fa-2x"></i>
+              </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+              <a href="/products" class="text-white text-decoration-none">Manage Products</a>
+              <i class="fas fa-arrow-circle-right text-white"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 col-lg-3 mb-4">
+          <div class="card bg-info text-white h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="text-uppercase">Return Management</h6>
+                </div>
+                <i class="fas fa-undo-alt fa-2x"></i>
+              </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+              <a href="/returns" class="text-white text-decoration-none">Manage Returns</a>
+              <i class="fas fa-arrow-circle-right text-white"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 mb-4">
+          <div class="card bg-secondary text-white h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="text-uppercase">Create Return</h6>
+                </div>
+                <i class="fas fa-exchange-alt fa-2x"></i>
+              </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+              <a href="/returns/select-bill" class="text-white text-decoration-none">Create Return Bill</a>
+              <i class="fas fa-arrow-circle-right text-white"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row mt-4">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="d-grid gap-2">
+                    <a href="/bills/create" class="btn btn-outline-primary">
+                      <i class="fas fa-file-invoice me-2"></i> Create New Bill
+                    </a>
+                    <a href="/products/add" class="btn btn-outline-danger">
+                      <i class="fas fa-plus me-2"></i> Add New Product
+                    </a>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="d-grid gap-2">
+                    <a href="/bills" class="btn btn-outline-success">
+                      <i class="fas fa-file-invoice-dollar me-2"></i> View All Bills
+                    </a>
+                    <a href="/customers" class="btn btn-outline-warning">
+                      <i class="fas fa-users me-2"></i> View All Customers
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

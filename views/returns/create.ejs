@@ -1,0 +1,704 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/returns/create' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Create Return Bill</h1>
+      </div>
+
+      <div class="row">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title">Return Bill Information</h5>
+            </div>
+            <div class="card-body">
+              <form action="/returns/create" method="POST" id="returnForm">
+                <!-- Customer Information -->
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5 class="border-bottom pb-2">Customer Information</h5>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="customerName" class="form-label">Customer Name</label>
+                    <input type="text" class="form-control" id="customerName" name="customerName" value="<%= originalBill ? originalBill.customer.name : '' %>" required>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="customerPhone" class="form-label">Phone Number</label>
+                    <input type="text" class="form-control" id="customerPhone" name="customerPhone" value="<%= originalBill ? originalBill.customer.phone : '' %>" required>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="customerPlace" class="form-label">Place</label>
+                    <input type="text" class="form-control" id="customerPlace" name="customerPlace" value="<%= originalBill ? originalBill.customer.place : '' %>" required>
+                  </div>
+                  <% if (originalBill) { %>
+                  <div class="col-md-12">
+                    <div class="alert alert-info">
+                      <i class="fas fa-info-circle"></i> Creating return for bill #<%= originalBill.billNumber %> dated <%= new Date(originalBill.createdAt).toLocaleDateString() %>
+                      <input type="hidden" name="originalBillId" value="<%= originalBill._id %>">
+                      <input type="hidden" name="originalBillNumber" value="<%= originalBill.billNumber %>">
+                    </div>
+                  </div>
+                  <% } %>
+                </div>
+
+                <!-- Return Details -->
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5 class="border-bottom pb-2">Return Details</h5>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="reason" class="form-label">Return Reason</label>
+                    <input type="text" class="form-control" id="reason" name="reason" required>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="pickedBy" class="form-label">Picked By</label>
+                    <input type="text" class="form-control" id="pickedBy" name="pickedBy" required>
+                  </div>
+                </div>
+
+                <!-- Products -->
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5 class="border-bottom pb-2">Products</h5>
+                    <% if (originalBill) { %>
+                      <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Select products from the original bill to return. You can only return quantities less than or equal to what was purchased.
+                      </div>
+
+                      <!-- Original Bill Products Section -->
+                      <div class="card mb-4">
+                        <div class="card-header bg-light">
+                          <h6 class="mb-0">Products from Bill #<%= originalBill.billNumber %></h6>
+                        </div>
+                        <div class="card-body">
+                          <div class="table-responsive">
+                            <table class="table table-sm table-hover" id="originalBillTable">
+                              <thead>
+                                <tr>
+                                  <th>Product</th>
+                                  <th>Category</th>
+                                  <th>Price</th>
+                                  <th>Original Qty</th>
+                                  <th>Return Qty</th>
+                                  <th>Action</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <% originalBill.items.forEach((item, index) => { %>
+                                  <tr>
+                                    <td><%= item.name %></td>
+                                    <td><%= item.category %></td>
+                                    <td>₹<%= item.price.toFixed(2) %></td>
+                                    <td><%= item.quantity %></td>
+                                    <td>
+                                      <input type="number" class="form-control form-control-sm return-qty"
+                                        data-index="<%= index %>"
+                                        data-max="<%= item.quantity %>"
+                                        min="0" max="<%= item.quantity %>" value="0">
+                                    </td>
+                                    <td>
+                                      <button type="button" class="btn btn-sm btn-primary add-to-return-from-bill"
+                                        data-product-id="<%= item.product %>"
+                                        data-product-name="<%= item.name %>"
+                                        data-category="<%= item.category %>"
+                                        data-price="<%= item.price %>"
+                                        data-max-qty="<%= item.quantity %>"
+                                        data-index="<%= index %>"
+                                        data-bill-id="<%= originalBill._id %>"
+                                        data-bill-number="<%= originalBill.billNumber %>">
+                                        <i class="fas fa-plus"></i> Add
+                                      </button>
+                                    </td>
+                                  </tr>
+                                <% }) %>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    <% } else { %>
+                      <div class="alert alert-info" id="purchaseHistoryAlert" style="display: none;">
+                        <i class="fas fa-info-circle"></i> Enter customer phone number to see their purchase history.
+                      </div>
+                      <div class="alert alert-warning" id="noPurchasesAlert" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i> No purchase history found for this customer.
+                      </div>
+
+                      <!-- Purchase History Section -->
+                      <div class="col-md-12 mb-4" id="purchaseHistorySection" style="display: none;">
+                        <div class="card">
+                          <div class="card-header bg-light">
+                            <h6 class="mb-0">Customer Purchase History</h6>
+                          </div>
+                          <div class="card-body">
+                            <div class="table-responsive">
+                              <table class="table table-sm table-hover" id="purchaseHistoryTable">
+                                <thead>
+                                  <tr>
+                                    <th>Bill #</th>
+                                    <th>Date</th>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                    <th>Action</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <!-- Purchase history will be loaded here -->
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    <% } %>
+
+                  <div class="col-md-12">
+                    <div id="productContainer">
+                      <!-- Product rows will be added here -->
+                      <div class="row mb-3 product-row">
+                        <div class="col-md-3">
+                          <label for="category" class="form-label">Category</label>
+                          <select class="form-select category-select" name="category">
+                            <option value="">Select Category</option>
+                            <% categories.forEach(category => { %>
+                              <option value="<%= category %>"><%= category %></option>
+                            <% }) %>
+                          </select>
+                        </div>
+                        <div class="col-md-4">
+                          <label for="product" class="form-label">Product</label>
+                          <select class="form-select product-select" name="productIds[]" required disabled>
+                            <option value="">Select Product</option>
+                          </select>
+                        </div>
+                        <div class="col-md-2">
+                          <label for="quantity" class="form-label">Quantity</label>
+                          <input type="number" class="form-control quantity-input" name="quantities[]" min="1" value="1" required>
+                        </div>
+                        <div class="col-md-2">
+                          <label for="amount" class="form-label">Amount</label>
+                          <input type="text" class="form-control product-amount" readonly>
+                          <input type="hidden" class="original-bill-id" name="originalBillIds[]" value="">
+                          <input type="hidden" class="original-bill-number" name="originalBillNumbers[]" value="">
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                          <button type="button" class="btn btn-danger remove-product mb-0" style="display: none;">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="row mt-3">
+                      <div class="col-md-12">
+                        <button type="button" id="addProduct" class="btn btn-outline-primary">
+                          <i class="fas fa-plus"></i> Add Product
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-12 text-end">
+                    <button type="submit" class="btn btn-primary">Create Return Bill</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Handle adding products from original bill
+    const addFromBillButtons = document.querySelectorAll('.add-to-return-from-bill');
+
+    addFromBillButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const index = this.dataset.index;
+        const returnQtyInput = document.querySelector(`.return-qty[data-index="${index}"]`);
+        const returnQty = parseInt(returnQtyInput.value);
+        const maxQty = parseInt(returnQtyInput.dataset.max);
+
+        if (returnQty <= 0) {
+          alert('Please enter a quantity greater than 0');
+          return;
+        }
+
+        if (returnQty > maxQty) {
+          alert(`You can only return up to ${maxQty} units of this product`);
+          returnQtyInput.value = maxQty;
+          return;
+        }
+
+        const productId = this.dataset.productId;
+        const productName = this.dataset.productName;
+        const category = this.dataset.category;
+        const price = parseFloat(this.dataset.price);
+        const billId = this.dataset.billId;
+        const billNumber = this.dataset.billNumber;
+
+        // Add the product to the return form
+        addProductFromOriginalBill(productId, productName, category, price, returnQty, billId, billNumber);
+
+        // Disable the button after adding
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-check"></i> Added';
+      });
+    });
+
+    // Function to add a product from the original bill to the return form
+    const addProductFromOriginalBill = (productId, productName, category, price, returnQty, billId, billNumber) => {
+      // Check if we need to add a new row
+      const productRows = document.querySelectorAll('.product-row');
+      let targetRow;
+
+      // Look for an empty row first
+      for (const row of productRows) {
+        const productSelect = row.querySelector('.product-select');
+        if (productSelect.selectedIndex === 0) {
+          targetRow = row;
+          break;
+        }
+      }
+
+      // If no empty row found, add a new one
+      if (!targetRow) {
+        addProductRow();
+        targetRow = document.querySelectorAll('.product-row')[productRows.length];
+      }
+
+      // Set the category in the row
+      const categorySelect = targetRow.querySelector('.category-select');
+      for (let i = 0; i < categorySelect.options.length; i++) {
+        if (categorySelect.options[i].value === category) {
+          categorySelect.selectedIndex = i;
+          break;
+        }
+      }
+
+      // Fetch products for this category
+      fetchProductsByCategory(categorySelect, targetRow.querySelector('.product-select'))
+        .then(() => {
+          // After products are loaded, select the right product
+          setTimeout(() => {
+            const productSelect = targetRow.querySelector('.product-select');
+
+            // Find the product in the dropdown
+            for (let i = 0; i < productSelect.options.length; i++) {
+              if (productSelect.options[i].value === productId) {
+                productSelect.selectedIndex = i;
+
+                // Set quantity to the return quantity
+                const quantityInput = targetRow.querySelector('.quantity-input');
+                quantityInput.value = returnQty;
+                quantityInput.max = returnQty; // Limit to the return quantity
+
+                // Update amount (set to 0 for returns)
+                const amountInput = targetRow.querySelector('.product-amount');
+                amountInput.value = '₹' + (0).toFixed(2);
+
+                // Set original bill information
+                const originalBillIdInput = targetRow.querySelector('.original-bill-id');
+                const originalBillNumberInput = targetRow.querySelector('.original-bill-number');
+
+                if (originalBillIdInput && billId) {
+                  originalBillIdInput.value = billId;
+                }
+
+                if (originalBillNumberInput && billNumber) {
+                  originalBillNumberInput.value = billNumber;
+                }
+
+                break;
+              }
+            }
+          }, 500); // Give time for the products to load
+        });
+    };
+    // Function to fetch products by category
+    const fetchProductsByCategory = async (categorySelect, productSelect) => {
+      const category = categorySelect.value;
+
+      if (!category) {
+        productSelect.innerHTML = '<option value="">Select Product</option>';
+        productSelect.disabled = true;
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/products/category/${category}`);
+        const products = await response.json();
+
+        productSelect.innerHTML = '<option value="">Select Product</option>';
+
+        products.forEach(product => {
+          const option = document.createElement('option');
+          option.value = product._id;
+          option.textContent = `${product.name} - ₹${product.price.toFixed(2)} (${product.quantity} in stock)`;
+          option.dataset.price = product.price;
+          option.dataset.quantity = product.quantity;
+          productSelect.appendChild(option);
+        });
+
+        productSelect.disabled = false;
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
+    };
+
+    // Function to add a new product row
+    const addProductRow = () => {
+      const productContainer = document.getElementById('productContainer');
+      const productRows = productContainer.querySelectorAll('.product-row');
+
+      // Clone the first product row
+      const newRow = productRows[0].cloneNode(true);
+
+      // Reset the values in the new row
+      const categorySelect = newRow.querySelector('.category-select');
+      const productSelect = newRow.querySelector('.product-select');
+      const quantityInput = newRow.querySelector('.quantity-input');
+      const amountInput = newRow.querySelector('.product-amount');
+      const removeButton = newRow.querySelector('.remove-product');
+
+      categorySelect.value = '';
+      productSelect.innerHTML = '<option value="">Select Product</option>';
+      productSelect.disabled = true;
+      quantityInput.value = '1';
+      amountInput.value = '';
+
+      // Show the remove button for all rows
+      removeButton.style.display = 'block';
+
+      // Add event listeners to the new row
+      categorySelect.addEventListener('change', () => {
+        fetchProductsByCategory(categorySelect, productSelect);
+      });
+
+      productSelect.addEventListener('change', () => {
+        updateProductAmount(productSelect, quantityInput, amountInput);
+      });
+
+      quantityInput.addEventListener('input', () => {
+        updateProductAmount(productSelect, quantityInput, amountInput);
+      });
+
+      removeButton.addEventListener('click', () => {
+        newRow.remove();
+        calculateTotalAmount();
+      });
+
+      // Append the new row to the container
+      productContainer.appendChild(newRow);
+    };
+
+    // Function to update product amount
+    const updateProductAmount = (productSelect, quantityInput, amountInput) => {
+      if (productSelect.selectedIndex > 0 && quantityInput.value) {
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
+        const price = parseFloat(selectedOption.dataset.price);
+        const quantity = parseInt(quantityInput.value);
+        const availableQuantity = parseInt(selectedOption.dataset.quantity || 0);
+
+        // Validate quantity against available stock
+        if (quantity > availableQuantity) {
+          alert(`Only ${availableQuantity} units available in stock for ${selectedOption.textContent.split(' - ')[0]}`);
+          quantityInput.value = availableQuantity;
+          // Recalculate with the adjusted quantity
+          const adjustedQuantity = parseInt(quantityInput.value);
+          const amount = price * adjustedQuantity;
+          amountInput.value = '₹' + amount.toFixed(2);
+        } else if (!isNaN(price) && !isNaN(quantity)) {
+          const amount = price * quantity;
+          amountInput.value = '₹' + amount.toFixed(2);
+        } else {
+          amountInput.value = '';
+        }
+      } else {
+        amountInput.value = '';
+      }
+    };
+
+    // Add event listeners to the initial product row
+    const initialRow = document.querySelector('.product-row');
+    const initialCategorySelect = initialRow.querySelector('.category-select');
+    const initialProductSelect = initialRow.querySelector('.product-select');
+    const initialQuantityInput = initialRow.querySelector('.quantity-input');
+    const initialAmountInput = initialRow.querySelector('.product-amount');
+
+    initialCategorySelect.addEventListener('change', () => {
+      fetchProductsByCategory(initialCategorySelect, initialProductSelect);
+    });
+
+    initialProductSelect.addEventListener('change', () => {
+      updateProductAmount(initialProductSelect, initialQuantityInput, initialAmountInput);
+    });
+
+    initialQuantityInput.addEventListener('input', () => {
+      updateProductAmount(initialProductSelect, initialQuantityInput, initialAmountInput);
+    });
+
+    // Add event listener to the "Add Product" button
+    document.getElementById('addProduct').addEventListener('click', addProductRow);
+
+    // Add event listener to the form submission
+    document.getElementById('returnForm').addEventListener('submit', function(e) {
+      const productSelects = document.querySelectorAll('.product-select');
+      let hasSelectedProduct = false;
+
+      productSelects.forEach(select => {
+        if (select.selectedIndex > 0) {
+          hasSelectedProduct = true;
+        }
+      });
+
+      if (!hasSelectedProduct) {
+        e.preventDefault();
+        alert('Please select at least one product');
+      }
+    });
+
+    // Add event listener to show/hide remove buttons based on number of product rows
+    const updateRemoveButtons = () => {
+      const productRows = document.querySelectorAll('.product-row');
+      const removeButtons = document.querySelectorAll('.remove-product');
+
+      if (productRows.length === 1) {
+        removeButtons[0].style.display = 'none';
+      } else {
+        removeButtons.forEach(button => {
+          button.style.display = 'block';
+        });
+      }
+    };
+
+    // Initialize remove buttons
+    updateRemoveButtons();
+
+    // Add event delegation for remove buttons
+    document.getElementById('productContainer').addEventListener('click', function(e) {
+      if (e.target.classList.contains('remove-product') || e.target.closest('.remove-product')) {
+        const button = e.target.classList.contains('remove-product') ? e.target : e.target.closest('.remove-product');
+        const row = button.closest('.product-row');
+
+        // Only remove if there's more than one product row
+        if (document.querySelectorAll('.product-row').length > 1) {
+          row.remove();
+          updateRemoveButtons();
+        }
+      }
+    });
+
+    // Fetch customers for autocomplete
+    const fetchCustomers = async () => {
+      try {
+        const response = await fetch('/customers/api/all');
+        const customers = await response.json();
+
+        // Create a map of customer data by phone number
+        const customerMap = {};
+        customers.forEach(customer => {
+          customerMap[customer.phone] = {
+            name: customer.name,
+            place: customer.place
+          };
+        });
+
+        // Set up autocomplete for customer phone
+        const customerPhoneInput = document.getElementById('customerPhone');
+        const customerNameInput = document.getElementById('customerName');
+        const customerPlaceInput = document.getElementById('customerPlace');
+
+        customerPhoneInput.addEventListener('input', function() {
+          const phone = this.value.trim();
+          if (customerMap[phone]) {
+            customerNameInput.value = customerMap[phone].name;
+            customerPlaceInput.value = customerMap[phone].place;
+
+            // Show purchase history alert
+            document.getElementById('purchaseHistoryAlert').style.display = 'block';
+
+            // Fetch purchase history after a short delay
+            clearTimeout(window.phoneInputTimeout);
+            window.phoneInputTimeout = setTimeout(() => {
+              fetchCustomerPurchaseHistory(phone);
+            }, 500);
+          }
+        });
+
+      } catch (error) {
+        console.error('Error fetching customers:', error);
+      }
+    };
+
+    // Fetch customer purchase history
+    const fetchCustomerPurchaseHistory = async (phone) => {
+      try {
+        // Show loading state
+        document.getElementById('purchaseHistoryAlert').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading purchase history...';
+
+        const response = await fetch(`/api/customer-purchases/${phone}`);
+        const purchaseHistory = await response.json();
+
+        // Hide alerts
+        document.getElementById('purchaseHistoryAlert').style.display = 'none';
+        document.getElementById('noPurchasesAlert').style.display = 'none';
+
+        if (purchaseHistory.length === 0) {
+          // Show no purchases alert
+          document.getElementById('noPurchasesAlert').style.display = 'block';
+          document.getElementById('purchaseHistorySection').style.display = 'none';
+          return;
+        }
+
+        // Show purchase history section
+        document.getElementById('purchaseHistorySection').style.display = 'block';
+
+        // Clear existing rows
+        const tableBody = document.querySelector('#purchaseHistoryTable tbody');
+        tableBody.innerHTML = '';
+
+        // Add rows for each purchase
+        purchaseHistory.forEach(item => {
+          const row = document.createElement('tr');
+
+          // Format date
+          const date = new Date(item.billDate);
+          const formattedDate = `${date.toLocaleDateString()}`;
+
+          row.innerHTML = `
+            <td>${item.billNumber}</td>
+            <td>${formattedDate}</td>
+            <td>${item.productName}</td>
+            <td>${item.category}</td>
+            <td>${item.quantity}</td>
+            <td>₹${item.price.toFixed(2)}</td>
+            <td>
+              <button type="button" class="btn btn-sm btn-primary add-to-return"
+                data-product-id="${item.productId}"
+                data-product-name="${item.productName}"
+                data-category="${item.category}"
+                data-price="${item.price}"
+                data-max-qty="${item.quantity}"
+                data-bill-id="${item.billId}"
+                data-bill-number="${item.billNumber}">
+                <i class="fas fa-plus"></i> Add
+              </button>
+            </td>
+          `;
+
+          tableBody.appendChild(row);
+        });
+
+        // Add event listeners to the Add buttons
+        document.querySelectorAll('.add-to-return').forEach(button => {
+          button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            const productName = this.dataset.productName;
+            const category = this.dataset.category;
+            const price = parseFloat(this.dataset.price);
+            const maxQty = parseInt(this.dataset.maxQty);
+            const billId = this.dataset.billId;
+            const billNumber = this.dataset.billNumber;
+
+            // Add the product to the return form
+            addProductFromPurchaseHistory(productId, productName, category, price, maxQty, billId, billNumber);
+          });
+        });
+
+      } catch (error) {
+        console.error('Error fetching purchase history:', error);
+        document.getElementById('purchaseHistoryAlert').innerHTML = '<i class="fas fa-exclamation-circle"></i> Error loading purchase history.';
+      }
+    };
+
+    // Function to add a product from purchase history to the return form
+    const addProductFromPurchaseHistory = (productId, productName, category, price, maxQty, billId, billNumber) => {
+      // Check if we need to add a new row
+      const productRows = document.querySelectorAll('.product-row');
+      let targetRow;
+
+      // Look for an empty row first
+      for (const row of productRows) {
+        const productSelect = row.querySelector('.product-select');
+        if (productSelect.selectedIndex === 0) {
+          targetRow = row;
+          break;
+        }
+      }
+
+      // If no empty row found, add a new one
+      if (!targetRow) {
+        addProductRow();
+        targetRow = document.querySelectorAll('.product-row')[productRows.length];
+      }
+
+      // Set the category in the row
+      const categorySelect = targetRow.querySelector('.category-select');
+      for (let i = 0; i < categorySelect.options.length; i++) {
+        if (categorySelect.options[i].value === category) {
+          categorySelect.selectedIndex = i;
+          break;
+        }
+      }
+
+      // Fetch products for this category
+      fetchProductsByCategory(categorySelect, targetRow.querySelector('.product-select'))
+        .then(() => {
+          // After products are loaded, select the right product
+          setTimeout(() => {
+            const productSelect = targetRow.querySelector('.product-select');
+
+            // Find the product in the dropdown
+            for (let i = 0; i < productSelect.options.length; i++) {
+              if (productSelect.options[i].value === productId) {
+                productSelect.selectedIndex = i;
+
+                // Set quantity (default to 1, max is the purchased quantity)
+                const quantityInput = targetRow.querySelector('.quantity-input');
+                quantityInput.value = 1;
+                quantityInput.max = maxQty;
+
+                // Update amount
+                const amountInput = targetRow.querySelector('.product-amount');
+                amountInput.value = '₹' + price.toFixed(2);
+
+                // Set original bill information
+                const originalBillIdInput = targetRow.querySelector('.original-bill-id');
+                const originalBillNumberInput = targetRow.querySelector('.original-bill-number');
+
+                if (originalBillIdInput && billId) {
+                  originalBillIdInput.value = billId;
+                }
+
+                if (originalBillNumberInput && billNumber) {
+                  originalBillNumberInput.value = billNumber;
+                }
+
+                break;
+              }
+            }
+          }, 500); // Give time for the products to load
+        });
+    };
+
+    // Call the function to fetch customers
+    fetchCustomers();
+  });
+</script>
+
+<%- include('../partials/footer') %>

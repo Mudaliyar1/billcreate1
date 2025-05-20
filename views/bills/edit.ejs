@@ -1,0 +1,309 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/bills' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Edit Bill <%= bill.billNumber %></h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <a href="/bills/<%= bill._id %>" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Bill
+          </a>
+        </div>
+      </div>
+
+      <%- include('../partials/messages') %>
+
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title mb-0">Edit Bill Information</h5>
+            </div>
+            <div class="card-body">
+              <form action="/bills/<%= bill._id %>/edit" method="POST" id="editBillForm">
+                <!-- Customer Information -->
+                <div class="row mb-4">
+                  <div class="col-12">
+                    <h5>Customer Information</h5>
+                  </div>
+
+                  <div class="col-md-4 mb-3">
+                    <label for="customerName" class="form-label">Customer Name</label>
+                    <input type="text" class="form-control" id="customerName" name="customerName" value="<%= bill.customer.name %>" required>
+                  </div>
+
+                  <div class="col-md-4 mb-3">
+                    <label for="customerPhone" class="form-label">Phone Number</label>
+                    <input type="text" class="form-control" id="customerPhone" name="customerPhone" value="<%= bill.customer.phone %>" required>
+                  </div>
+
+                  <div class="col-md-4 mb-3">
+                    <label for="customerPlace" class="form-label">Place</label>
+                    <input type="text" class="form-control" id="customerPlace" name="customerPlace" value="<%= bill.customer.place %>" required>
+                  </div>
+
+                  <div class="col-md-4 mb-3">
+                    <label for="customerEmail" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="customerEmail" name="customerEmail" value="<%= bill.customer.email || '' %>" placeholder="Optional">
+                  </div>
+                </div>
+
+                <!-- Work Information -->
+                <div class="row mb-4">
+                  <div class="col-md-6 mb-3">
+                    <label for="work" class="form-label">Work</label>
+                    <input type="text" class="form-control" id="work" name="work" value="<%= bill.work %>" required>
+                  </div>
+
+                  <div class="col-md-6 mb-3">
+                    <label for="pickedBy" class="form-label">Picked By</label>
+                    <input type="text" class="form-control" id="pickedBy" name="pickedBy" value="<%= bill.pickedBy %>" required>
+                  </div>
+                </div>
+
+                <!-- Products Information (Read-only) -->
+                <div class="row mb-4">
+                  <div class="col-12">
+                    <h5>Products</h5>
+                    <p class="text-muted small">Products cannot be edited. Create a new bill if you need to change products.</p>
+                  </div>
+
+                  <div class="col-12">
+                    <div class="table-responsive">
+                      <table class="table table-striped">
+                        <thead>
+                          <tr>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <% bill.items.forEach(item => { %>
+                            <tr>
+                              <td><%= item.name %></td>
+                              <td><%= item.category %></td>
+                              <td>₹<%= item.price.toFixed(2) %></td>
+                              <td><%= item.quantity %></td>
+                              <td>₹<%= (item.price * item.quantity).toFixed(2) %></td>
+                            </tr>
+                          <% }) %>
+                        </tbody>
+                        <tfoot>
+                          <% if (bill.gstEnabled) { %>
+                          <tr>
+                            <td colspan="4" class="text-end">Subtotal:</td>
+                            <td>₹<%= bill.subTotal.toFixed(2) %></td>
+                          </tr>
+                          <tr>
+                            <td colspan="4" class="text-end">GST (<%= bill.gstType %> @ <%= bill.gstPercentage %>%):</td>
+                            <td>₹<%= bill.gstAmount.toFixed(2) %></td>
+                          </tr>
+                          <% } %>
+                          <tr>
+                            <th colspan="4" class="text-end">Total Amount:</th>
+                            <th>₹<%= bill.totalAmount.toFixed(2) %></th>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- GST Information -->
+                <div class="row mb-4">
+                  <div class="col-12">
+                    <h5>GST Information</h5>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="gstEnabled" name="gstEnabled" <%= bill.gstEnabled ? 'checked' : '' %>>
+                      <label class="form-check-label" for="gstEnabled">Enable GST</label>
+                    </div>
+                    <small class="form-text text-muted">Toggle to enable/disable GST for this bill</small>
+                    <!-- Hidden inputs for GST values -->
+                    <input type="hidden" id="defaultGstType" name="defaultGstType" value="CGST+SGST 12%">
+                  </div>
+                  <div class="col-md-6 mb-3 <%= bill.gstEnabled ? '' : 'd-none' %>" id="gstTypeContainer">
+                    <label for="gstType" class="form-label">GST Type</label>
+                    <select class="form-select" id="gstType" name="gstType">
+                      <option value="CGST+SGST 5%" <%= bill.gstType === 'CGST+SGST 5%' ? 'selected' : '' %>>CGST+SGST 5%</option>
+                      <option value="CGST+SGST 12%" <%= bill.gstType === 'CGST+SGST 12%' || !bill.gstType ? 'selected' : '' %>>CGST+SGST 12%</option>
+                      <option value="CGST+SGST 18%" <%= bill.gstType === 'CGST+SGST 18%' ? 'selected' : '' %>>CGST+SGST 18%</option>
+                      <option value="CGST+SGST 28%" <%= bill.gstType === 'CGST+SGST 28%' ? 'selected' : '' %>>CGST+SGST 28%</option>
+                      <option value="IGST 5%" <%= bill.gstType === 'IGST 5%' ? 'selected' : '' %>>IGST 5%</option>
+                      <option value="IGST 12%" <%= bill.gstType === 'IGST 12%' ? 'selected' : '' %>>IGST 12%</option>
+                      <option value="IGST 18%" <%= bill.gstType === 'IGST 18%' ? 'selected' : '' %>>IGST 18%</option>
+                      <option value="IGST 28%" <%= bill.gstType === 'IGST 28%' ? 'selected' : '' %>>IGST 28%</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6 mb-3 <%= bill.gstEnabled ? '' : 'd-none' %>" id="gstPercentageContainer">
+                    <label for="gstPercentage" class="form-label">GST Percentage (%)</label>
+                    <input type="text" class="form-control" id="gstPercentage" name="gstPercentage" value="<%= bill.gstPercentage || 12 %>" readonly>
+                    <small class="form-text text-muted">GST percentage is set based on the selected GST type</small>
+                  </div>
+                  <div class="col-md-6 mb-3 <%= bill.gstEnabled ? '' : 'd-none' %>" id="gstAmountContainer">
+                    <label for="gstAmount" class="form-label">GST Amount (₹)</label>
+                    <input type="text" class="form-control" id="gstAmount" name="gstAmount" value="<%= bill.gstAmount ? bill.gstAmount.toFixed(2) : '0.00' %>" readonly>
+                    <small class="form-text text-muted">GST amount calculated based on subtotal</small>
+                  </div>
+                </div>
+
+                <!-- Payment Information -->
+                <div class="row mb-4">
+                  <div class="col-12">
+                    <h5>Payment Information</h5>
+                  </div>
+
+                  <input type="hidden" id="paymentType" name="paymentType" value="Cash">
+
+                  <div class="col-md-6 mb-3">
+                    <label for="paidAmount" class="form-label">Paid Amount (₹)</label>
+                    <input type="number" class="form-control" id="paidAmount" name="paidAmount" step="0.01" min="0" max="<%= bill.totalAmount %>" value="<%= bill.paidAmount %>" required oninput="validatePaidAmount(this)">
+                    <div class="invalid-feedback" id="paidAmountFeedback">Paid amount cannot exceed the total amount of ₹<%= bill.totalAmount.toFixed(2) %>.</div>
+                  </div>
+
+                  <div class="col-md-6 mb-3">
+                    <div class="alert alert-info">
+                      <small>Enter the amount paid by the customer. If the customer pays the full amount, the remaining amount will be 0.</small>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-12 d-flex justify-content-between">
+                    <button type="submit" class="btn btn-primary">
+                      <i class="fas fa-save"></i> Update Bill
+                    </button>
+                    <a href="/bills/<%= bill._id %>/delete" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this bill? This action cannot be undone.');">
+                      <i class="fas fa-trash"></i> Delete Bill
+                    </a>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  // Function to validate paid amount doesn't exceed total
+  function validatePaidAmount(input) {
+    const totalAmount = parseFloat('<%= bill.totalAmount %>'); // Parse as string first to avoid JS/EJS confusion
+    const paidValue = parseFloat(input.value);
+
+    console.log('Validating paid amount:', paidValue, 'against total:', totalAmount);
+
+    if (isNaN(paidValue)) {
+      return;
+    }
+
+    // Check if paid amount exceeds total
+    if (paidValue > totalAmount) {
+      input.value = totalAmount.toFixed(2); // Reset to max allowed value
+      input.classList.add('is-invalid');
+
+      // Show feedback message
+      const feedbackId = input.id === 'paidAmount' ? 'paidAmountFeedback' : 'customPaidAmountFeedback';
+      const feedbackElement = document.getElementById(feedbackId);
+      if (feedbackElement) {
+        feedbackElement.style.display = 'block';
+      }
+    } else {
+      input.classList.remove('is-invalid');
+
+      // Hide feedback message
+      const feedbackId = input.id === 'paidAmount' ? 'paidAmountFeedback' : 'customPaidAmountFeedback';
+      const feedbackElement = document.getElementById(feedbackId);
+      if (feedbackElement) {
+        feedbackElement.style.display = 'none';
+      }
+    }
+  }
+
+  // Function to extract GST percentage from GST type
+  function getGstPercentageFromType(gstType) {
+    if (!gstType) return 12; // Default to 12%
+
+    // Extract percentage from the type string (e.g., "CGST+SGST 12%" -> 12)
+    const match = gstType.match(/(\d+)%/);
+    return match ? parseInt(match[1]) : 12;
+  }
+
+  // Function to calculate GST amount
+  function calculateGstAmount() {
+    const subtotal = parseFloat('<%= bill.subTotal || bill.totalAmount %>');
+    const gstPercentage = parseFloat(document.getElementById('gstPercentage').value);
+
+    if (isNaN(subtotal) || isNaN(gstPercentage)) return;
+
+    const gstAmount = (subtotal * gstPercentage) / 100;
+    document.getElementById('gstAmount').value = gstAmount.toFixed(2);
+
+    // Update total amount (for display only, not changing the actual bill total)
+    const totalWithGst = subtotal + gstAmount;
+    document.getElementById('totalWithGst').textContent = '₹' + totalWithGst.toFixed(2);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const paidAmountInput = document.getElementById('paidAmount');
+    const gstEnabledCheckbox = document.getElementById('gstEnabled');
+    const gstTypeContainer = document.getElementById('gstTypeContainer');
+    const gstPercentageContainer = document.getElementById('gstPercentageContainer');
+    const gstAmountContainer = document.getElementById('gstAmountContainer');
+    const gstTypeSelect = document.getElementById('gstType');
+
+    // Set the paid amount to the total amount if it's not already set
+    if (!paidAmountInput.value) {
+      const totalAmount = parseFloat('<%= bill.totalAmount %>'); // Parse as string first to avoid JS/EJS confusion
+      paidAmountInput.value = totalAmount.toFixed(2);
+    }
+
+    // Handle GST type change
+    if (gstTypeSelect) {
+      gstTypeSelect.addEventListener('change', function() {
+        const selectedType = this.value;
+        const percentage = getGstPercentageFromType(selectedType);
+
+        document.getElementById('gstPercentage').value = percentage;
+        calculateGstAmount();
+      });
+    }
+
+    // Handle GST toggle
+    if (gstEnabledCheckbox) {
+      gstEnabledCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+          gstTypeContainer.classList.remove('d-none');
+          gstPercentageContainer.classList.remove('d-none');
+          gstAmountContainer.classList.remove('d-none');
+
+          // Calculate GST amount
+          calculateGstAmount();
+        } else {
+          gstTypeContainer.classList.add('d-none');
+          gstPercentageContainer.classList.add('d-none');
+          gstAmountContainer.classList.add('d-none');
+        }
+      });
+    }
+
+    // Calculate GST amount on page load if GST is enabled
+    if (gstEnabledCheckbox && gstEnabledCheckbox.checked) {
+      calculateGstAmount();
+    }
+  });
+</script>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,261 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/inventory' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Inventory Sales Report</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <a href="/inventory" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left"></i> Back to Inventory
+          </a>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+            <i class="fas fa-print"></i> Print Report
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="row mb-4 no-print">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-body">
+              <form action="/inventory/report" method="GET" class="row g-3">
+                <div class="col-md-3">
+                  <label for="startDate" class="form-label">Start Date</label>
+                  <input type="date" class="form-control" id="startDate" name="startDate" value="<%= filters.startDate || '' %>">
+                </div>
+                <div class="col-md-3">
+                  <label for="endDate" class="form-label">End Date</label>
+                  <input type="date" class="form-control" id="endDate" name="endDate" value="<%= filters.endDate || '' %>">
+                </div>
+                <div class="col-md-3">
+                  <label for="category" class="form-label">Category</label>
+                  <select class="form-select" id="category" name="category">
+                    <option value="all" <%= filters.category === 'all' ? 'selected' : '' %>>All Categories</option>
+                    <option value="Board" <%= filters.category === 'Board' ? 'selected' : '' %>>Board</option>
+                    <option value="Chanel" <%= filters.category === 'Chanel' ? 'selected' : '' %>>Chanel</option>
+                    <option value="Hardware" <%= filters.category === 'Hardware' ? 'selected' : '' %>>Hardware</option>
+                    <option value="Bori" <%= filters.category === 'Bori' ? 'selected' : '' %>>Bori</option>
+                  </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                  <button type="submit" class="btn btn-primary me-2">Generate Report</button>
+                  <a href="/inventory/report" class="btn btn-outline-secondary">Reset</a>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Report Header -->
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-body">
+              <div class="text-center mb-4">
+                <h3>Khushi Decoraters</h3>
+                <h5>Inventory Sales Report</h5>
+                <p>
+                  <% if (filters.startDate && filters.endDate) { %>
+                    Period: <%= new Date(filters.startDate).toLocaleDateString() %> to <%= new Date(filters.endDate).toLocaleDateString() %>
+                  <% } else if (filters.startDate) { %>
+                    Period: From <%= new Date(filters.startDate).toLocaleDateString() %>
+                  <% } else if (filters.endDate) { %>
+                    Period: Until <%= new Date(filters.endDate).toLocaleDateString() %>
+                  <% } else { %>
+                    Period: All Time
+                  <% } %>
+                  <% if (filters.category && filters.category !== 'all') { %>
+                    | Category: <%= filters.category %>
+                  <% } %>
+                </p>
+              </div>
+
+              <!-- Summary Stats -->
+              <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                  <div class="card bg-primary text-white h-100">
+                    <div class="card-body">
+                      <h6 class="text-uppercase">Total Items Sold</h6>
+                      <h2 class="mb-0"><%= totals.quantitySold %></h2>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                  <div class="card bg-success text-white h-100">
+                    <div class="card-body">
+                      <h6 class="text-uppercase">Total Sales</h6>
+                      <h2 class="mb-0">₹<%= totals.totalAmount.toFixed(2) %></h2>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                  <div class="card bg-info text-white h-100">
+                    <div class="card-body">
+                      <h6 class="text-uppercase">Paid Amount</h6>
+                      <h2 class="mb-0">₹<%= totals.paidAmount.toFixed(2) %></h2>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                  <div class="card bg-warning text-dark h-100">
+                    <div class="card-body">
+                      <h6 class="text-uppercase">Credit Amount</h6>
+                      <h2 class="mb-0">₹<%= totals.creditAmount.toFixed(2) %></h2>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sales Table -->
+              <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Category</th>
+                      <th>Quantity Sold</th>
+                      <th>Total Sales</th>
+                      <th>Paid Amount</th>
+                      <th>Credit Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% if (salesArray.length > 0) { %>
+                      <% salesArray.forEach(sale => { %>
+                        <tr>
+                          <td><%= sale.name %></td>
+                          <td><span class="badge bg-<%= sale.category === 'Board' ? 'primary' : sale.category === 'Chanel' ? 'success' : sale.category === 'Hardware' ? 'warning' : 'danger' %>"><%= sale.category %></span></td>
+                          <td><%= sale.quantitySold %></td>
+                          <td>₹<%= sale.totalAmount.toFixed(2) %></td>
+                          <td>₹<%= sale.paidAmount.toFixed(2) %></td>
+                          <td>₹<%= sale.creditAmount.toFixed(2) %></td>
+                        </tr>
+                      <% }) %>
+                    <% } else { %>
+                      <tr>
+                        <td colspan="6" class="text-center">No sales data found for the selected period</td>
+                      </tr>
+                    <% } %>
+                  </tbody>
+                  <tfoot>
+                    <tr class="table-dark fw-bold">
+                      <td colspan="2">Totals</td>
+                      <td><%= totals.quantitySold %></td>
+                      <td>₹<%= totals.totalAmount.toFixed(2) %></td>
+                      <td>₹<%= totals.paidAmount.toFixed(2) %></td>
+                      <td>₹<%= totals.creditAmount.toFixed(2) %></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Inventory Status -->
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Current Inventory Status</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm table-striped">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Category</th>
+                      <th>Current Stock</th>
+                      <th>Price</th>
+                      <th>Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% if (products.length > 0) { %>
+                      <% 
+                        let totalInventoryValue = 0;
+                        products.forEach(product => {
+                          const value = product.price * (product.quantity || 0);
+                          totalInventoryValue += value;
+                      %>
+                        <tr>
+                          <td><%= product.name %></td>
+                          <td><span class="badge bg-<%= product.category === 'Board' ? 'primary' : product.category === 'Chanel' ? 'success' : product.category === 'Hardware' ? 'warning' : 'danger' %>"><%= product.category %></span></td>
+                          <td class="<%= (product.quantity || 0) <= 5 ? 'text-danger fw-bold' : '' %>">
+                            <%= product.quantity || 0 %>
+                            <% if ((product.quantity || 0) <= 5) { %>
+                              <span class="badge bg-danger">Low</span>
+                            <% } %>
+                          </td>
+                          <td>₹<%= product.price.toFixed(2) %></td>
+                          <td>₹<%= value.toFixed(2) %></td>
+                        </tr>
+                      <% }) %>
+                      <tr class="table-dark fw-bold">
+                        <td colspan="4">Total Inventory Value</td>
+                        <td>₹<%= totalInventoryValue.toFixed(2) %></td>
+                      </tr>
+                    <% } else { %>
+                      <tr>
+                        <td colspan="5" class="text-center">No products found</td>
+                      </tr>
+                    <% } %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+    
+    .container-fluid {
+      width: 100%;
+      padding: 0;
+    }
+    
+    body {
+      padding: 20px;
+    }
+    
+    .card {
+      border: none !important;
+      box-shadow: none !important;
+    }
+    
+    .card-body {
+      padding: 0 !important;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit form when filters change
+    document.getElementById('category').addEventListener('change', function() {
+      if (document.getElementById('startDate').value || document.getElementById('endDate').value) {
+        document.querySelector('form').submit();
+      }
+    });
+  });
+</script>
+
+<%- include('../partials/footer') %>

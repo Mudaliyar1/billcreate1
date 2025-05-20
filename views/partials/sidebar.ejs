@@ -1,0 +1,83 @@
+<div id="sidebarMenu" class="sidebar bg-dark text-white collapse">
+  <div class="d-flex flex-column p-3 h-100">
+    <div class="d-flex d-md-none justify-content-between align-items-center mb-3">
+      <span class="fs-4">🧾 Kushi Trader</span>
+      <button type="button" class="btn-close btn-close-white" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Close"></button>
+    </div>
+    <hr class="d-md-none">
+    <ul class="nav nav-pills flex-column mb-auto">
+      <li class="nav-item">
+        <a href="/dashboard" class="nav-link text-white <%= path === '/dashboard' ? 'active' : '' %>">
+          <i class="fas fa-tachometer-alt me-2"></i>
+          Dashboard
+        </a>
+      </li>
+      <li>
+        <a href="/bills/create" class="nav-link text-white <%= path === '/bills/create' ? 'active' : '' %>">
+          <i class="fas fa-file-invoice me-2"></i>
+          Create Bill
+        </a>
+      </li>
+      <li>
+        <a href="/bills" class="nav-link text-white <%= path === '/bills' ? 'active' : '' %>">
+          <i class="fas fa-file-invoice-dollar me-2"></i>
+          Bills
+        </a>
+      </li>
+      <li>
+        <a href="/customers" class="nav-link text-white <%= path === '/customers' ? 'active' : '' %>">
+          <i class="fas fa-users me-2"></i>
+          Customers
+        </a>
+      </li>
+      <li>
+        <a href="/products" class="nav-link text-white <%= path === '/products' ? 'active' : '' %>">
+          <i class="fas fa-boxes me-2"></i>
+          Products
+        </a>
+      </li>
+      <li>
+        <a href="/inventory" class="nav-link text-white <%= path === '/inventory' ? 'active' : '' %>">
+          <i class="fas fa-warehouse me-2"></i>
+          Inventory
+        </a>
+      </li>
+      <li>
+        <a href="/returns" class="nav-link text-white <%= path === '/returns' ? 'active' : '' %>">
+          <i class="fas fa-undo-alt me-2"></i>
+          Return Management
+        </a>
+      </li>
+      <li>
+        <a href="/statistics" class="nav-link text-white <%= path === '/statistics' ? 'active' : '' %>">
+          <i class="fas fa-chart-bar me-2"></i>
+          Statistics
+        </a>
+      </li>
+      <li>
+        <a href="/gst" class="nav-link text-white <%= path === '/gst' ? 'active' : '' %>">
+          <i class="fas fa-percentage me-2"></i>
+          GST Rates
+        </a>
+      </li>
+      <% if (typeof user !== 'undefined' && user.isAdmin) { %>
+      <li>
+        <a href="/test/validate-email" class="nav-link text-white <%= path === '/test/validate-email' ? 'active' : '' %>">
+          <i class="fas fa-envelope-open-text me-2"></i>
+          Email Validation
+        </a>
+      </li>
+      <% } %>
+    </ul>
+    <hr>
+    <div class="dropdown">
+      <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fas fa-user-circle me-2 fs-4"></i>
+        <strong>Admin</strong>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+        <li><a class="dropdown-item" href="/logout">Sign out</a></li>
+      </ul>
+    </div>
+  </div>
+</div>

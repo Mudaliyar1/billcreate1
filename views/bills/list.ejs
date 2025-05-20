@@ -1,0 +1,167 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/bills' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Bills</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <a href="/bills/create" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-plus"></i> Create Bill
+          </a>
+        </div>
+      </div>
+
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header">
+              <div class="row align-items-center">
+                <div class="col">
+                  <h5 class="card-title mb-0">Bill List</h5>
+                </div>
+                <div class="col-auto">
+                  <div class="input-group">
+                    <input type="text" class="form-control" id="billSearch" placeholder="Search bills...">
+                    <button class="btn btn-outline-secondary" type="button" id="searchButton">
+                      <i class="fas fa-search"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <% if (bills && bills.length > 0) { %>
+                <div class="table-responsive">
+                  <table class="table table-striped table-hover">
+                    <thead>
+                      <tr>
+                        <th>Bill Number</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Payment</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="billTableBody">
+                      <% bills.forEach(bill => { %>
+                        <tr>
+                          <td><%= bill.billNumber %></td>
+                          <td><%= bill.customer.name %></td>
+                          <td><%= new Date(bill.createdAt).toLocaleDateString() %></td>
+                          <td>₹<%= bill.totalAmount.toFixed(2) %></td>
+                          <td>
+                            <% if (bill.paymentType === 'Cash') { %>
+                              <span class="badge bg-success">Cash</span>
+                            <% } else { %>
+                              <span class="badge bg-warning"><%= bill.creditType %></span>
+                            <% } %>
+                          </td>
+                          <td>
+                            <a href="/bills/<%= bill._id %>" class="btn btn-sm btn-outline-primary">
+                              <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="/bills/<%= bill._id %>/edit" class="btn btn-sm btn-outline-warning">
+                              <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="/bills/<%= bill._id %>/download" class="btn btn-sm btn-outline-success">
+                              <i class="fas fa-download"></i>
+                            </a>
+                            <a href="/bills/<%= bill._id %>/delete" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this bill? This action cannot be undone.');">
+                              <i class="fas fa-trash"></i>
+                            </a>
+                          </td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+              <% } else { %>
+                <div class="alert alert-info">
+                  No bills found. <a href="/bills/create">Create a bill</a>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('billSearch');
+    const searchButton = document.getElementById('searchButton');
+    const billTableBody = document.getElementById('billTableBody');
+
+    // Function to perform search
+    const performSearch = () => {
+      const query = searchInput.value.trim().toLowerCase();
+
+      if (query.length === 0) {
+        location.reload();
+        return;
+      }
+
+      const rows = billTableBody.querySelectorAll('tr');
+
+      rows.forEach(row => {
+        const billNumber = row.cells[0].textContent.toLowerCase();
+        const customerName = row.cells[1].textContent.toLowerCase();
+
+        if (billNumber.includes(query) || customerName.includes(query)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      // Check if any rows are visible
+      const visibleRows = Array.from(rows).filter(row => row.style.display !== 'none');
+
+      if (visibleRows.length === 0) {
+        const noResultsRow = document.createElement('tr');
+        noResultsRow.id = 'noResultsRow';
+        noResultsRow.innerHTML = `
+          <td colspan="6" class="text-center">No bills found matching "${query}"</td>
+        `;
+
+        // Remove existing no results row if it exists
+        const existingNoResultsRow = document.getElementById('noResultsRow');
+        if (existingNoResultsRow) {
+          existingNoResultsRow.remove();
+        }
+
+        billTableBody.appendChild(noResultsRow);
+      } else {
+        // Remove no results row if it exists
+        const existingNoResultsRow = document.getElementById('noResultsRow');
+        if (existingNoResultsRow) {
+          existingNoResultsRow.remove();
+        }
+      }
+    };
+
+    // Search on button click
+    searchButton.addEventListener('click', performSearch);
+
+    // Search on Enter key press
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        performSearch();
+      }
+    });
+
+    // Search as you type
+    searchInput.addEventListener('input', performSearch);
+  });
+</script>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,68 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/customers' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Edit Customer</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <a href="/customers/<%= customer._id %>" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Customer
+          </a>
+        </div>
+      </div>
+
+      <%- include('../partials/messages') %>
+
+      <div class="row mb-4">
+        <div class="col-md-8 mx-auto">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title mb-0">Edit Customer Information</h5>
+            </div>
+            <div class="card-body">
+              <form action="/customers/<%= customer._id %>/edit" method="POST">
+                <div class="mb-3">
+                  <label for="name" class="form-label">Name</label>
+                  <input type="text" class="form-control" id="name" name="name" value="<%= customer.name %>" required>
+                </div>
+
+                <div class="mb-3">
+                  <label for="phone" class="form-label">Phone Number</label>
+                  <input type="text" class="form-control" id="phone" name="phone" value="<%= customer.phone %>" required>
+                </div>
+
+                <div class="mb-3">
+                  <label for="place" class="form-label">Place</label>
+                  <input type="text" class="form-control" id="place" name="place" value="<%= customer.place %>" required>
+                </div>
+
+                <div class="mb-3">
+                  <label for="email" class="form-label">Email</label>
+                  <input type="email" class="form-control" id="email" name="email" value="<%= customer.email || '' %>" placeholder="Optional">
+                </div>
+
+                <div class="d-flex justify-content-between">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Update Customer
+                  </button>
+
+                  <a href="/customers/<%= customer._id %>/delete" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this customer? This action cannot be undone. Note: Customers with bills cannot be deleted.');">
+                    <i class="fas fa-trash"></i> Delete Customer
+                  </a>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

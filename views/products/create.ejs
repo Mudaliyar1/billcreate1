@@ -1,0 +1,64 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/products' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Add Product</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <a href="/products" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Products
+          </a>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-8 col-lg-6">
+          <div class="card">
+            <div class="card-body">
+              <form action="/products/add" method="POST">
+                <div class="mb-3">
+                  <label for="name" class="form-label">Product Name</label>
+                  <input type="text" class="form-control" id="name" name="name" required>
+                </div>
+
+                <div class="mb-3">
+                  <label for="price" class="form-label">Price (₹)</label>
+                  <input type="number" class="form-control" id="price" name="price" step="0.01" min="0" required>
+                </div>
+
+                <div class="mb-3">
+                  <label for="quantity" class="form-label">Quantity</label>
+                  <input type="number" class="form-control" id="quantity" name="quantity" min="0" value="0" required>
+                  <div class="form-text">Initial stock quantity</div>
+                </div>
+
+                <div class="mb-3">
+                  <label for="category" class="form-label">Category</label>
+                  <select class="form-select" id="category" name="category" required>
+                    <option value="" selected disabled>Select Category</option>
+                    <option value="Board">Board</option>
+                    <option value="Chanel">Chanel</option>
+                    <option value="Hardware">Hardware</option>
+                    <option value="Bori">Bori</option>
+                  </select>
+                </div>
+
+                <div class="d-grid gap-2">
+                  <button type="submit" class="btn btn-primary">Add Product</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

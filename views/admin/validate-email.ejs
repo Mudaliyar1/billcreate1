@@ -1,0 +1,76 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/test/validate-email', user: { isAdmin: true } }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Email Validation Test</h1>
+      </div>
+
+      <%- include('../partials/messages') %>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header">
+              <h5>Test Email Validation</h5>
+            </div>
+            <div class="card-body">
+              <form action="/test/validate-email" method="POST">
+                <div class="mb-3">
+                  <label for="email" class="form-label">Email Address</label>
+                  <input type="text" class="form-control" id="email" name="email" value="<%= locals.email || '' %>" required>
+                  <small class="form-text text-muted">Enter an email address to validate</small>
+                </div>
+                <button type="submit" class="btn btn-primary">Validate Email</button>
+              </form>
+
+              <% if (locals.tested) { %>
+                <hr>
+                <h5>Validation Results:</h5>
+                <div class="mt-3">
+                  <p><strong>Email:</strong> <%= email %></p>
+                  <p><strong>Format Valid:</strong> <span class="badge <%= isValid ? 'bg-success' : 'bg-danger' %>"><%= isValid ? 'Yes' : 'No' %></span></p>
+                  <% if (isValid) { %>
+                    <p><strong>MX Records Valid:</strong> <span class="badge <%= hasMX ? 'bg-success' : 'bg-warning' %>"><%= hasMX ? 'Yes' : 'No' %></span></p>
+                  <% } %>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header">
+              <h5>Email Troubleshooting Tips</h5>
+            </div>
+            <div class="card-body">
+              <h6>Common Email Issues:</h6>
+              <ul>
+                <li><strong>Invalid Format:</strong> Make sure the email follows the standard format (user@domain.com)</li>
+                <li><strong>Missing MX Records:</strong> The domain might not be configured to receive emails</li>
+                <li><strong>Spam Filters:</strong> Emails might be delivered but sent to spam folders</li>
+                <li><strong>Typos:</strong> Check for typos in the email address</li>
+              </ul>
+
+              <h6>Brevo Specific Issues:</h6>
+              <ul>
+                <li>Make sure your Brevo API key is valid and has sufficient sending credits</li>
+                <li>Check if the sender email domain is verified in your Brevo account</li>
+                <li>Verify that your Brevo account is in good standing</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
