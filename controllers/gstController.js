@@ -4,7 +4,7 @@ const GstRate = require('../models/GstRate');
 exports.getGstRates = async (req, res) => {
   try {
     const gstRates = await GstRate.find().sort({ type: 1 });
-    
+
     res.render('gst/list', {
       title: 'GST Rates - Kushi Trader',
       gstRates,
@@ -37,20 +37,20 @@ exports.getCreateGstRate = async (req, res) => {
 exports.postCreateGstRate = async (req, res) => {
   try {
     const { type, percentage, description, isDefault } = req.body;
-    
+
     // Validate input
     if (!type || !percentage || !description) {
       req.flash('error', 'All fields are required');
       return res.redirect('/gst/create');
     }
-    
+
     // Check if GST rate with this type already exists
     const existingRate = await GstRate.findOne({ type });
     if (existingRate) {
       req.flash('error', `GST rate with type ${type} already exists`);
       return res.redirect('/gst/create');
     }
-    
+
     // Create new GST rate
     const gstRate = await GstRate.create({
       type,
@@ -58,7 +58,7 @@ exports.postCreateGstRate = async (req, res) => {
       description,
       isDefault: isDefault === 'on'
     });
-    
+
     req.flash('success', 'GST rate created successfully');
     res.redirect('/gst');
   } catch (error) {
@@ -72,12 +72,12 @@ exports.postCreateGstRate = async (req, res) => {
 exports.getEditGstRate = async (req, res) => {
   try {
     const gstRate = await GstRate.findById(req.params.id);
-    
+
     if (!gstRate) {
       req.flash('error', 'GST rate not found');
       return res.redirect('/gst');
     }
-    
+
     res.render('gst/edit', {
       title: 'Edit GST Rate - Kushi Trader',
       gstRate,
@@ -95,28 +95,28 @@ exports.getEditGstRate = async (req, res) => {
 exports.updateGstRate = async (req, res) => {
   try {
     const { percentage, description, isDefault } = req.body;
-    
+
     // Validate input
     if (!percentage || !description) {
       req.flash('error', 'All fields are required');
       return res.redirect(`/gst/${req.params.id}/edit`);
     }
-    
+
     // Find and update the GST rate
     const gstRate = await GstRate.findById(req.params.id);
-    
+
     if (!gstRate) {
       req.flash('error', 'GST rate not found');
       return res.redirect('/gst');
     }
-    
+
     // Update fields
     gstRate.percentage = parseFloat(percentage);
     gstRate.description = description;
     gstRate.isDefault = isDefault === 'on';
-    
+
     await gstRate.save();
-    
+
     req.flash('success', 'GST rate updated successfully');
     res.redirect('/gst');
   } catch (error) {
@@ -130,14 +130,14 @@ exports.updateGstRate = async (req, res) => {
 exports.deleteGstRate = async (req, res) => {
   try {
     const gstRate = await GstRate.findById(req.params.id);
-    
+
     if (!gstRate) {
       req.flash('error', 'GST rate not found');
       return res.redirect('/gst');
     }
-    
-    await gstRate.remove();
-    
+
+    await gstRate.deleteOne();
+
     req.flash('success', 'GST rate deleted successfully');
     res.redirect('/gst');
   } catch (error) {
