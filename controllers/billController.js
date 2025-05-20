@@ -15,7 +15,7 @@ exports.getCreateBill = async (req, res) => {
     const categories = ['Board', 'Chanel', 'Hardware', 'Bori'];
 
     res.render('bills/create', {
-      title: 'Create Bill - Kushi Trader',
+      title: 'Create Bill - Kushi Decorators',
       categories,
       error: req.flash('error'),
       success: req.flash('success')
@@ -423,7 +423,7 @@ exports.getBills = async (req, res) => {
     const bills = await Bill.find().sort({ createdAt: -1 });
 
     res.render('bills/list', {
-      title: 'Bills - Kushi Trader',
+      title: 'Bills - Kushi Decorators',
       bills,
       error: req.flash('error'),
       success: req.flash('success')
@@ -452,7 +452,7 @@ exports.getBillDetails = async (req, res) => {
     const admin = await Admin.findById(req.session.adminId);
 
     res.render('bills/details', {
-      title: `Bill ${bill.billNumber} - Kushi Trader`,
+      title: `Bill ${bill.billNumber} - Kushi Decorators`,
       bill,
       returnBill,
       user: admin ? { ...admin.toObject(), isAdmin: true } : null,
@@ -599,7 +599,7 @@ exports.getEditBill = async (req, res) => {
     const categories = ['Board', 'Chanel', 'Hardware', 'Bori'];
 
     res.render('bills/edit', {
-      title: `Edit Bill ${bill.billNumber} - Kushi Trader`,
+      title: `Edit Bill ${bill.billNumber} - Kushi Decorators`,
       bill,
       categories,
       error: req.flash('error'),

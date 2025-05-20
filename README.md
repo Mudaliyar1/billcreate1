@@ -1,6 +1,6 @@
-# Kushi Trader - Bill Creation Web Application
+# Kushi Decorators - Bill Creation Web Application
 
-A comprehensive bill creation and management system for Kushi Trader.
+A comprehensive bill creation and management system for Kushi Decorators.
 
 ## Features
 

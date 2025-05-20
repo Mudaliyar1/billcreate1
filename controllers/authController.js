@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 // Login page
 exports.getLogin = (req, res) => {
   res.render('auth/login', {
-    title: 'Login - Kushi Trader',
+    title: 'Login - Kushi Decorators',
     error: req.flash('error'),
     success: req.flash('success')
   });

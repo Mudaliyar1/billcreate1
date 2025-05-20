@@ -6,7 +6,7 @@ exports.getProducts = async (req, res) => {
     const products = await Product.find().sort({ category: 1, name: 1 });
 
     res.render('products/list', {
-      title: 'Products - Kushi Trader',
+      title: 'Products - Kushi Decorators',
       products,
       error: req.flash('error'),
       success: req.flash('success')
@@ -21,7 +21,7 @@ exports.getProducts = async (req, res) => {
 // Get product creation form
 exports.getAddProduct = (req, res) => {
   res.render('products/create', {
-    title: 'Add Product - Kushi Trader',
+    title: 'Add Product - Kushi Decorators',
     error: req.flash('error'),
     success: req.flash('success')
   });

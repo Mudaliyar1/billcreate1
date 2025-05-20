@@ -68,7 +68,7 @@ exports.getSelectBill = async (req, res) => {
     });
 
     res.render('returns/select-bill', {
-      title: 'Select Bill for Return - Kushi Trader',
+      title: 'Select Bill for Return - Kushi Decorators',
       bills,
       returnBillMap,
       currentPage: page,
@@ -122,7 +122,7 @@ exports.getCreateReturnBill = async (req, res) => {
     }
 
     res.render('returns/create', {
-      title: 'Create Return Bill - Kushi Trader',
+      title: 'Create Return Bill - Kushi Decorators',
       categories,
       originalBill,
       customer,
@@ -437,7 +437,7 @@ exports.getEditReturnBill = async (req, res) => {
     const categories = ['Board', 'Chanel', 'Hardware', 'Bori'];
 
     res.render('returns/edit', {
-      title: `Edit Return ${returnBill.returnNumber} - Kushi Trader`,
+      title: `Edit Return ${returnBill.returnNumber} - Kushi Decorators`,
       returnBill,
       categories,
       error: req.flash('error'),
@@ -573,7 +573,7 @@ exports.getReturnStatistics = async (req, res) => {
     const stats = await getStatisticsData();
 
     res.render('returns/statistics', {
-      title: 'Return Statistics - Kushi Trader',
+      title: 'Return Statistics - Kushi Decorators',
       stats,
       error: req.flash('error'),
       success: req.flash('success')

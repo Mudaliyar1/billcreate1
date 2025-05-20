@@ -87,7 +87,7 @@ exports.getCustomers = async (req, res) => {
     });
 
     res.render('customers/list', {
-      title: 'Customers - Kushi Trader',
+      title: 'Customers - Kushi Decorators',
       customers,
       customerStats,
       overallStats,
@@ -231,7 +231,7 @@ exports.getCustomerDetails = async (req, res) => {
     };
 
     res.render('customers/details', {
-      title: `${customer.name} - Kushi Trader`,
+      title: `${customer.name} - Kushi Decorators`,
       customer,
       bills,
       filters: {
@@ -265,7 +265,7 @@ exports.getCustomerDetails = async (req, res) => {
 // Get customer creation form
 exports.getAddCustomer = (req, res) => {
   res.render('customers/create', {
-    title: 'Add Customer - Kushi Trader',
+    title: 'Add Customer - Kushi Decorators',
     error: req.flash('error'),
     success: req.flash('success')
   });
@@ -317,7 +317,7 @@ exports.getEditCustomer = async (req, res) => {
     }
 
     res.render('customers/edit', {
-      title: `Edit ${customer.name} - Kushi Trader`,
+      title: `Edit ${customer.name} - Kushi Decorators`,
       customer,
       error: req.flash('error'),
       success: req.flash('success')
