@@ -17,6 +17,8 @@
         </div>
       </div>
 
+      <%- include('../partials/messages') %>
+
       <div class="row">
         <div class="col-md-8 col-lg-6">
           <div class="card">
@@ -38,8 +40,9 @@
                 </div>
 
                 <div class="mb-3">
-                  <label for="email" class="form-label">Email</label>
-                  <input type="email" class="form-control" id="email" name="email" placeholder="Optional">
+                  <label for="email" class="form-label">Email (Optional)</label>
+                  <input type="email" class="form-control" id="email" name="email" placeholder="customer@example.com">
+                  <small class="form-text text-muted">Email address for sending bills and notifications</small>
                 </div>
 
                 <div class="d-grid gap-2">

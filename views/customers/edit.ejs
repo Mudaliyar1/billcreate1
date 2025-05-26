@@ -43,8 +43,9 @@
                 </div>
 
                 <div class="mb-3">
-                  <label for="email" class="form-label">Email</label>
-                  <input type="email" class="form-control" id="email" name="email" value="<%= customer.email || '' %>" placeholder="Optional">
+                  <label for="email" class="form-label">Email (Optional)</label>
+                  <input type="email" class="form-control" id="email" name="email" value="<%= customer.email || '' %>" placeholder="customer@example.com">
+                  <small class="form-text text-muted">Email address for sending bills and notifications</small>
                 </div>
 
                 <div class="d-flex justify-content-between">

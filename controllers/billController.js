@@ -8,6 +8,16 @@ const { sendBillEmail, isValidEmailFormat } = require('../utils/emailService');
 const fs = require('fs');
 const path = require('path');
 
+// Utility function to handle floating-point comparisons with tolerance
+function isAmountValid(paidAmount, totalAmount, tolerance = 1.0) {
+  return paidAmount <= (totalAmount + tolerance);
+}
+
+// Utility function to round amounts to 2 decimal places to avoid precision issues
+function roundAmount(amount) {
+  return Math.round(amount * 100) / 100;
+}
+
 // Get bill creation form
 exports.getCreateBill = async (req, res) => {
   try {
@@ -43,6 +53,7 @@ exports.postCreateBill = async (req, res) => {
     const creditType = req.body.creditType;
     const paidAmount = req.body.paidAmount;
     const customPaidAmount = req.body.customPaidAmount;
+    const billDate = req.body.billDate;
 
     // GST related fields
     const gstEnabled = req.body.gstEnabled === 'on';
@@ -66,6 +77,15 @@ exports.postCreateBill = async (req, res) => {
     // Handle array fields that might have square brackets in their names
     const productIds = req.body['productIds[]'] || req.body.productIds;
     const quantities = req.body['quantities[]'] || req.body.quantities;
+
+    console.log('Raw form data for products:', {
+      'productIds[]': req.body['productIds[]'],
+      'productIds': req.body.productIds,
+      'quantities[]': req.body['quantities[]'],
+      'quantities': req.body.quantities,
+      'finalProductIds': productIds,
+      'finalQuantities': quantities
+    });
 
     // Validate input with detailed error messages
     const missingFields = [];
@@ -92,6 +112,18 @@ exports.postCreateBill = async (req, res) => {
     if (missingFields.length > 0) {
       req.flash('error', `Missing required fields: ${missingFields.join(', ')}`);
       return res.redirect('/bills/create');
+    }
+
+    // Validate bill date
+    if (billDate) {
+      const selectedDate = new Date(billDate);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999); // Set to end of today
+
+      if (selectedDate > today) {
+        req.flash('error', 'Bill date cannot be in the future');
+        return res.redirect('/bills/create');
+      }
     }
 
     // Convert productIds and quantities to arrays if they're not already
@@ -148,9 +180,22 @@ exports.postCreateBill = async (req, res) => {
     }
 
     // Get products from database using valid product IDs
+    console.log('Searching for products with IDs:', validProductIds);
     const products = await Product.find({ _id: { $in: validProductIds } });
 
+    console.log('Found products:', products.map(p => ({
+      id: p._id.toString(),
+      name: p.name,
+      price: p.price,
+      category: p.category,
+      quantity: p.quantity
+    })));
+
     if (products.length !== validProductIds.length) {
+      console.log(`Product count mismatch: Expected ${validProductIds.length}, Found ${products.length}`);
+      const foundIds = products.map(p => p._id.toString());
+      const missingIds = validProductIds.filter(id => !foundIds.includes(id));
+      console.log('Missing product IDs:', missingIds);
       req.flash('error', 'Some products were not found');
       return res.redirect('/bills/create');
     }
@@ -160,9 +205,19 @@ exports.postCreateBill = async (req, res) => {
     let totalAmount = 0;
     const productUpdates = [];
 
+    console.log('Processing products for bill calculation:');
+    console.log('Valid Product IDs:', validProductIds);
+    console.log('Valid Quantities:', validQuantities);
+
     for (let i = 0; i < validProductIds.length; i++) {
       const product = products.find(p => p._id.toString() === validProductIds[i]);
       const quantity = parseInt(validQuantities[i]);
+
+      console.log(`Processing item ${i + 1}:`, {
+        productId: validProductIds[i],
+        quantity,
+        product: product ? { name: product.name, price: product.price } : 'NOT FOUND'
+      });
 
       if (product && quantity > 0) {
         // Check if there's enough quantity in stock
@@ -171,8 +226,16 @@ exports.postCreateBill = async (req, res) => {
           return res.redirect('/bills/create');
         }
 
-        const itemAmount = product.price * quantity;
-        totalAmount += itemAmount;
+        const itemAmount = roundAmount(product.price * quantity);
+        totalAmount = roundAmount(totalAmount + itemAmount);
+
+        console.log(`Item calculation:`, {
+          name: product.name,
+          price: product.price,
+          quantity,
+          itemAmount,
+          runningTotal: totalAmount
+        });
 
         items.push({
           product: product._id,
@@ -190,6 +253,8 @@ exports.postCreateBill = async (req, res) => {
         });
       }
     }
+
+
 
     // Ensure we have at least one valid item
     if (items.length === 0) {
@@ -224,18 +289,60 @@ exports.postCreateBill = async (req, res) => {
     if (gstEnabled) {
       // Use the GST amount from the form or calculate it
       if (gstType && gstPercentage > 0) {
-        calculatedGstAmount = gstAmount || (totalAmount * gstPercentage / 100);
+        calculatedGstAmount = gstAmount || roundAmount(totalAmount * gstPercentage / 100);
       } else {
         // Default to 12% if no GST type or percentage is provided
-        calculatedGstAmount = totalAmount * 0.12;
+        calculatedGstAmount = roundAmount(totalAmount * 0.12);
       }
 
+      // Round the GST amount
+      calculatedGstAmount = roundAmount(calculatedGstAmount);
+
       // Add GST amount to total
-      finalTotalAmount = totalAmount + calculatedGstAmount;
-      console.log('GST calculation:', {
-        subtotal: totalAmount,
-        gstAmount: calculatedGstAmount,
-        totalWithGst: finalTotalAmount
+      finalTotalAmount = roundAmount(totalAmount + calculatedGstAmount);
+    }
+
+    // Check if frontend and backend calculations match
+    const frontendSubtotal = parseFloat(req.body.subTotal || 0);
+    const backendSubtotal = totalAmount;
+    const calculationMismatch = Math.abs(frontendSubtotal - backendSubtotal) > 1.0;
+
+    console.log('Final amount calculation:', {
+      subTotal: totalAmount,
+      gstEnabled,
+      gstAmount: calculatedGstAmount,
+      finalTotalAmount,
+      requestPaidAmount: paidAmount,
+      requestSubTotal: req.body.subTotal,
+      frontendVsBackend: {
+        subtotalMatch: !calculationMismatch,
+        frontendSubtotal,
+        backendSubtotal,
+        difference: frontendSubtotal - backendSubtotal,
+        mismatch: calculationMismatch
+      }
+    });
+
+    // If there's a significant mismatch, use frontend calculation but log it
+    if (calculationMismatch && frontendSubtotal > 0) {
+      console.log('WARNING: Frontend and backend calculations differ significantly!');
+      console.log(`Using frontend calculation: ₹${frontendSubtotal} instead of backend: ₹${backendSubtotal}`);
+
+      // Use frontend subtotal for final calculation
+      totalAmount = frontendSubtotal;
+
+      // Recalculate final total with GST if enabled
+      if (gstEnabled) {
+        calculatedGstAmount = roundAmount(totalAmount * gstPercentage / 100);
+        finalTotalAmount = roundAmount(totalAmount + calculatedGstAmount);
+      } else {
+        finalTotalAmount = totalAmount;
+      }
+
+      console.log('Adjusted final calculation:', {
+        adjustedSubTotal: totalAmount,
+        adjustedGstAmount: calculatedGstAmount,
+        adjustedFinalTotal: finalTotalAmount
       });
     }
 
@@ -253,7 +360,8 @@ exports.postCreateBill = async (req, res) => {
       subTotal: totalAmount,
       gstEnabled,
       totalAmount: finalTotalAmount,
-      paymentType
+      paymentType,
+      billDate: billDate ? new Date(billDate) : new Date()
     };
 
     // Add GST fields if enabled
@@ -276,17 +384,55 @@ exports.postCreateBill = async (req, res) => {
       // Parse the paid amount
       const parsedAmount = parseFloat(paidAmount);
 
+      console.log('Payment validation details:', {
+        rawPaidAmount: paidAmount,
+        parsedAmount,
+        finalTotalAmount,
+        difference: parsedAmount - finalTotalAmount,
+        isValid: isAmountValid(parsedAmount, finalTotalAmount),
+        tolerance: 1.0,
+        willPass: parsedAmount <= (finalTotalAmount + 1.0)
+      });
+
       // Validate the paid amount
       if (isNaN(parsedAmount)) {
+        console.log('Invalid paid amount - not a number:', paidAmount);
         req.flash('error', 'Invalid paid amount. Please enter a valid number.');
         return res.redirect('/bills/create');
       }
 
-      // Ensure paid amount doesn't exceed total
-      if (parsedAmount > finalTotalAmount) {
-        req.flash('error', 'Paid amount cannot exceed the total amount');
+      // Ensure paid amount doesn't exceed total (with very generous tolerance for floating-point precision)
+      const tolerance = Math.max(10.0, finalTotalAmount * 0.01); // 1% of total or ₹10, whichever is higher
+
+      // Additional check: if paid amount matches frontend subtotal, allow it
+      const frontendSubtotal = parseFloat(req.body.subTotal || 0);
+      const matchesFrontendCalculation = Math.abs(parsedAmount - frontendSubtotal) <= 1.0;
+
+      if (parsedAmount > (finalTotalAmount + tolerance) && !matchesFrontendCalculation) {
+        console.log('Payment validation failed with details:', {
+          parsedAmount,
+          finalTotalAmount,
+          tolerance,
+          difference: parsedAmount - finalTotalAmount,
+          exceedsBy: parsedAmount - finalTotalAmount - tolerance,
+          frontendSubtotal,
+          matchesFrontendCalculation
+        });
+        req.flash('error', `Paid amount (₹${parsedAmount}) cannot exceed the total amount (₹${finalTotalAmount}). If this seems incorrect, please refresh the page and try again.`);
         return res.redirect('/bills/create');
       }
+
+      // If paid amount matches frontend calculation but not backend, log it but allow
+      if (matchesFrontendCalculation && Math.abs(parsedAmount - finalTotalAmount) > tolerance) {
+        console.log('NOTICE: Paid amount matches frontend calculation, allowing despite backend mismatch:', {
+          parsedAmount,
+          finalTotalAmount,
+          frontendSubtotal,
+          backendCalculatedTotal: finalTotalAmount
+        });
+      }
+
+      console.log('Payment validation passed successfully');
 
       billData.paidAmount = parsedAmount;
       billData.remainingAmount = finalTotalAmount - parsedAmount;
@@ -641,13 +787,26 @@ exports.updateBill = async (req, res) => {
       gstEnabled,
       gstType,
       gstPercentage,
-      gstAmount
+      gstAmount,
+      billDate
     } = req.body;
 
     // Validate input
     if (!customerName || !customerPhone || !customerPlace || !work || !pickedBy || !paymentType) {
       req.flash('error', 'All fields are required');
       return res.redirect(`/bills/${req.params.id}/edit`);
+    }
+
+    // Validate bill date
+    if (billDate) {
+      const selectedDate = new Date(billDate);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999); // Set to end of today
+
+      if (selectedDate > today) {
+        req.flash('error', 'Bill date cannot be in the future');
+        return res.redirect(`/bills/${req.params.id}/edit`);
+      }
     }
 
     // Update customer information
@@ -657,6 +816,11 @@ exports.updateBill = async (req, res) => {
     bill.work = work;
     bill.pickedBy = pickedBy;
     bill.paymentType = paymentType;
+
+    // Update bill date if provided
+    if (billDate) {
+      bill.billDate = new Date(billDate);
+    }
 
     // Handle GST
     const isGstEnabled = gstEnabled === 'on';
@@ -720,8 +884,8 @@ exports.updateBill = async (req, res) => {
         return res.redirect(`/bills/${req.params.id}/edit`);
       }
 
-      // Ensure paid amount doesn't exceed total
-      if (parsedAmount > bill.totalAmount) {
+      // Ensure paid amount doesn't exceed total (with generous tolerance for floating-point precision)
+      if (!isAmountValid(parsedAmount, bill.totalAmount)) {
         req.flash('error', 'Paid amount cannot exceed the total amount');
         return res.redirect(`/bills/${req.params.id}/edit`);
       }

@@ -66,7 +66,7 @@
                 <div class="col-md-6 text-md-end">
                   <h5 class="mb-3">Bill Information</h5>
                   <p><strong>Bill Number:</strong> <%= bill.billNumber %></p>
-                  <p><strong>Date:</strong> <%= new Date(bill.createdAt).toLocaleDateString() %></p>
+                  <p><strong>Date:</strong> <%= new Date(bill.billDate || bill.createdAt).toLocaleDateString() %></p>
                   <p>
                     <strong>Payment Type:</strong>
                     <% if (bill.paymentType === 'Cash') { %>

@@ -6,9 +6,9 @@ const { generateUpiQRCodeDataURL } = require('./generateQRCode');
 // Define colors
 const primaryColor = '#2A9D8F';
 const secondaryColor = '#264653';
-const accentColor = '#E76F51';
+
 const darkText = '#2C3E50';
-const lightGray = '#E9ECEF';
+
 
 // Helper function to draw rectangles
 const drawRect = (doc, x, y, width, height, color, radius = 0) => {
@@ -76,7 +76,7 @@ const generateBillPDF = (bill, filePath) => {
          .fontSize(12)
          .font('Helvetica')
          .text(`#${bill.billNumber}`, doc.page.width - 150, 60)
-         .text(`Date: ${new Date().toLocaleDateString('en-IN')} ${new Date().toLocaleTimeString('en-IN')}`, doc.page.width - 150, 80);
+         .text(`Date: ${new Date(bill.billDate || bill.createdAt).toLocaleDateString('en-IN')}`, doc.page.width - 150, 80);
 
       // Customer and billing information section
       const billingY = 160;
@@ -152,7 +152,7 @@ const generateBillPDF = (bill, filePath) => {
 
         // Show GST details
         const gstY = totalY + 30;
-        doc.text(`GST (${bill.gstType} @ ${bill.gstPercentage}%)`, 380, gstY)
+        doc.text(`GST (${bill.gstPercentage}%)`, 380, gstY)
            .text(`₹${bill.gstAmount.toFixed(2)}`, 480, gstY);
 
         // Show total with GST
@@ -195,10 +195,7 @@ const generateBillPDF = (bill, filePath) => {
            .font('Helvetica')
            .text(`₹${bill.remainingAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 55);
 
-        // Status indicator with modern styling
-        const statusColor = bill.creditType === 'Full Credit' ? accentColor :
-                           bill.creditType === 'Half Credit' ? '#FF9F1C' : '#2A9D8F';
-        drawRect(doc, doc.page.width - 100, paymentY + 35, 40, 40, statusColor, 6);
+
       } else if (bill.paymentType === 'Cash') {
         // Cash payment details with consistent layout
         doc.font('Helvetica-Bold')
@@ -211,12 +208,6 @@ const generateBillPDF = (bill, filePath) => {
              .text('Balance Due:', doc.page.width - 280, paymentY + 55)
              .font('Helvetica')
              .text(`₹${bill.remainingAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 55);
-
-          // Status indicator for partial payment
-          drawRect(doc, doc.page.width - 100, paymentY + 35, 40, 40, '#FF9F1C', 6);
-        } else {
-          // Status indicator for full payment
-          drawRect(doc, doc.page.width - 100, paymentY + 35, 40, 40, '#2A9D8F', 6);
         }
       }
 
@@ -288,13 +279,7 @@ const generateBillPDF = (bill, filePath) => {
          .text('|', 420, footerY + 5)
          .text('Email: info@kushitrader.com', 440, footerY + 5);
 
-      // Digital copy section
-      drawRect(doc, doc.page.width - 100, footerY - 50, 60, 60, lightGray, 6);
-      drawBorder(doc, doc.page.width - 100, footerY - 50, 60, 60, primaryColor, 6, 1);
-      doc.fillColor(darkText)
-         .fontSize(8)
-         .text('Scan for', doc.page.width - 100, footerY - 60, { width: 60, align: 'center' })
-         .text('digital copy', doc.page.width - 100, footerY - 50, { width: 60, align: 'center' });
+
 
       // Finalize the PDF
       doc.end();

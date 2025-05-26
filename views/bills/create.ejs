@@ -632,13 +632,20 @@
                     <hr>
                   </div>
 
+                  <div class="col-md-6 mb-3">
+                    <label for="billDate" class="form-label">Bill Date</label>
+                    <input type="date" class="form-control" id="billDate" name="billDate"
+                           max="<%= new Date().toISOString().split('T')[0] %>"
+                           value="<%= new Date().toISOString().split('T')[0] %>"
+                           required>
+                    <small class="form-text text-muted">Select the date for this bill (cannot be future date)</small>
+                  </div>
+
                   <input type="hidden" id="paymentType" name="paymentType" value="Cash">
                   <div class="col-md-6 mb-3">
                     <label for="paidAmount" class="form-label">Paid Amount (₹)</label>
-                    <!-- Hidden input for form submission -->
-                    <input type="hidden" id="actualPaidAmount" name="paidAmount" value="0">
-                    <!-- Visible input for user interaction -->
-                    <input type="text" class="form-control" id="paidAmountDisplay"
+                    <!-- Visible input for user interaction that will be submitted -->
+                    <input type="number" step="0.01" min="0" class="form-control" id="paidAmount" name="paidAmount"
                       placeholder="0.00"
                       required>
                     <div class="invalid-feedback" id="paidAmountFeedback">Paid amount cannot exceed the total amount.</div>
@@ -704,62 +711,47 @@
 </div>
 
 <script>
-  // Flag to track if user has manually edited the paid amount
+  // Simple bill creation script
   let userEditedPaidAmount = false;
-  let userPaidAmount = null;
 
-  // Function to handle paid amount changes
-  function handlePaidAmountChange(input) {
-    const totalAmountElement = document.getElementById('totalAmount');
-    if (!totalAmountElement) return;
+  // Simple function to update paid amount when total changes
+  function updatePaidAmount() {
+    const totalElement = document.getElementById('totalAmount');
+    const paidInput = document.getElementById('paidAmount');
 
-    // Mark that user has manually edited the paid amount
-    userEditedPaidAmount = true;
-
-    // Get the total amount
-    const totalText = totalAmountElement.textContent;
-    const totalValue = parseFloat(totalText.replace('₹', ''));
-
-    // Get the paid amount
-    let paidValue = parseFloat(input.value);
-
-    // If the input is not a valid number, don't proceed with validation
-    if (isNaN(paidValue)) {
-      // Allow empty or partial input during typing
-      if (input.value === '' || input.value === '.' || input.value.endsWith('.')) {
-        input.classList.remove('is-invalid');
-        return;
-      }
-
-      // Invalid input that's not empty or partial
-      input.classList.add('is-invalid');
-      document.getElementById('paidAmountFeedback').textContent = 'Please enter a valid number';
-      document.getElementById('paidAmountFeedback').style.display = 'block';
-      return;
-    }
-
-    // Store the user's input
-    userPaidAmount = paidValue;
-    console.log('User set paid amount to:', paidValue);
-
-    // Check if paid amount exceeds total
-    if (paidValue > totalValue) {
-      input.value = totalValue.toFixed(2); // Reset to max allowed value
-      userPaidAmount = totalValue; // Update stored value
-      input.classList.add('is-invalid');
-      document.getElementById('paidAmountFeedback').textContent = 'Paid amount cannot exceed the total amount';
-      document.getElementById('paidAmountFeedback').style.display = 'block';
-    } else {
-      // Valid input
-      input.classList.remove('is-invalid');
-      document.getElementById('paidAmountFeedback').style.display = 'none';
-
-      // Format the number to have 2 decimal places
-      if (input.value !== '' && !input.value.endsWith('.') && !input.value.endsWith('.0')) {
-        input.value = paidValue.toFixed(2);
+    if (totalElement && paidInput && !userEditedPaidAmount) {
+      const totalText = totalElement.textContent;
+      const totalValue = parseFloat(totalText.replace('₹', ''));
+      if (!isNaN(totalValue)) {
+        paidInput.value = totalValue.toFixed(2);
       }
     }
   }
+
+  // Mark when user manually edits paid amount
+  document.addEventListener('DOMContentLoaded', function() {
+    const paidInput = document.getElementById('paidAmount');
+    if (paidInput) {
+      paidInput.addEventListener('input', function() {
+        userEditedPaidAmount = true;
+      });
+    }
+
+    // Add validation for bill date
+    const billDateInput = document.getElementById('billDate');
+    if (billDateInput) {
+      billDateInput.addEventListener('change', function() {
+        const selectedDate = new Date(this.value);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // Set to end of today
+
+        if (selectedDate > today) {
+          alert('Bill date cannot be in the future. Please select today or a past date.');
+          this.value = new Date().toISOString().split('T')[0]; // Reset to today
+        }
+      });
+    }
+  });
 
   // Direct function to update amount for a row when product select changes
   function updateAmountForProductSelect(productSelect) {
@@ -935,18 +927,15 @@
         console.log(`Updated total amount display to: ${total.toFixed(2)}`);
 
         // Also update the paid amount input
-        const paidAmountInput = document.getElementById('actualPaidAmount');
-        const paidAmountDisplay = document.getElementById('paidAmountDisplay');
-        if (paidAmountInput && paidAmountDisplay) {
+        const paidAmountInput = document.getElementById('paidAmount');
+        if (paidAmountInput) {
           // Only update if user hasn't manually edited it
           if (!userEditedPaidAmount) {
             paidAmountInput.value = total.toFixed(2);
-            paidAmountDisplay.value = total.toFixed(2);
           } else if (userPaidAmount !== null) {
             // If user has edited, cap at total if needed
             const valueToSet = Math.min(userPaidAmount, total);
             paidAmountInput.value = valueToSet.toFixed(2);
-            paidAmountDisplay.value = valueToSet.toFixed(2);
           }
         }
 
@@ -1023,11 +1012,27 @@
     }
 
     // Check paid amount
-    const paidAmount = document.getElementById('paidAmount').value;
-    if (!paidAmount && paidAmount !== '0') {
-      alert('Please enter paid amount');
-      document.getElementById('paidAmount').focus();
+    const paidAmountInput = document.getElementById('paidAmount');
+    const paidAmount = parseFloat(paidAmountInput.value);
+
+    if (isNaN(paidAmount) || paidAmount < 0) {
+      alert('Please enter a valid paid amount');
+      paidAmountInput.focus();
       return false;
+    }
+
+    // Validate paid amount doesn't exceed total
+    const totalAmountElement = document.getElementById('totalAmount');
+    if (totalAmountElement) {
+      const totalAmount = parseFloat(totalAmountElement.textContent.replace('₹', '').replace(',', '')) || 0;
+      const tolerance = 1.0; // 1 rupee tolerance for floating-point precision
+
+      if (paidAmount > (totalAmount + tolerance)) {
+        alert(`Paid amount (₹${paidAmount}) cannot exceed the total amount (₹${totalAmount})`);
+        paidAmountInput.value = totalAmount.toFixed(2);
+        paidAmountInput.focus();
+        return false;
+      }
     }
 
     // All validations passed
@@ -1162,18 +1167,15 @@
     totalAmountElement.textContent = '₹' + total.toFixed(2);
 
     // Update paid amount input
-    const paidAmountInput = document.getElementById('actualPaidAmount');
-    const paidAmountDisplay = document.getElementById('paidAmountDisplay');
-    if (paidAmountInput && paidAmountDisplay) {
+    const paidAmountInput = document.getElementById('paidAmount');
+    if (paidAmountInput) {
       // Only update if user hasn't manually edited
       if (!userEditedPaidAmount) {
         paidAmountInput.value = total.toFixed(2);
-        paidAmountDisplay.value = total.toFixed(2);
       } else if (userPaidAmount !== null) {
         // If user has edited, cap at total if needed
         const valueToSet = Math.min(userPaidAmount, total);
         paidAmountInput.value = valueToSet.toFixed(2);
-        paidAmountDisplay.value = valueToSet.toFixed(2);
       }
     }
 
@@ -1771,24 +1773,21 @@
 
     // Get reference to the paid amount input
     const paidAmountInput = document.getElementById('paidAmount');
-    const paidAmountDisplay = document.getElementById('paidAmountDisplay');
 
     // Add dedicated event listeners to the paid amount input to ensure it captures all user edits
-    if (paidAmountDisplay) {
+    if (paidAmountInput) {
       // Input event - fires when the value changes
-      paidAmountDisplay.addEventListener('input', function() {
+      paidAmountInput.addEventListener('input', function() {
         userEditedPaidAmount = true;
         userPaidAmount = parseFloat(this.value) || 0;
         console.log('User edited paid amount to:', userPaidAmount);
 
-        // Update the hidden input
-        if (paidAmountInput) {
-          paidAmountInput.value = userPaidAmount;
-        }
+        // Validate the amount
+        handlePaidAmountChange(this);
       });
 
       // Focus event - fires when the field gets focus
-      paidAmountDisplay.addEventListener('focus', function() {
+      paidAmountInput.addEventListener('focus', function() {
         // Store the current value when the field gets focus
         const currentValue = parseFloat(this.value) || 0;
         if (!userEditedPaidAmount) {
@@ -1797,15 +1796,11 @@
       });
 
       // Blur event - fires when the field loses focus
-      paidAmountDisplay.addEventListener('blur', function() {
+      paidAmountInput.addEventListener('blur', function() {
         if (this.value.trim() === '') {
           this.value = '0.00';
           userPaidAmount = 0;
-
-          // Update the hidden input
-          if (paidAmountInput) {
-            paidAmountInput.value = '0.00';
-          }
+          userEditedPaidAmount = true;
         }
       });
     }
@@ -1936,16 +1931,14 @@
             console.log('Updated total amount to subtotal:', subtotal.toFixed(2));
 
             // Update paid amount
-            if (paidAmountInput && paidAmountDisplay) {
+            if (paidAmountInput) {
               if (!userEditedPaidAmount) {
                 paidAmountInput.value = subtotal.toFixed(2);
-                paidAmountDisplay.value = subtotal.toFixed(2);
                 console.log('Updated paid amount to subtotal:', subtotal.toFixed(2));
               } else {
                 // Cap at subtotal if needed
                 const valueToSet = Math.min(userPaidAmount, subtotal);
                 paidAmountInput.value = valueToSet.toFixed(2);
-                paidAmountDisplay.value = valueToSet.toFixed(2);
                 console.log('Updated paid amount to user value (capped):', valueToSet.toFixed(2));
               }
             }
@@ -2453,12 +2446,13 @@
         return false;
       }
 
-      // Ensure the paid amount doesn't exceed the total
+      // Ensure the paid amount doesn't exceed the total (with tolerance for floating-point precision)
       let finalTotalElement = document.getElementById('totalAmount');
       let finalTotalText = finalTotalElement.textContent;
       let finalTotalValue = parseFloat(finalTotalText.replace('₹', ''));
+      const tolerance = 0.01; // 1 paisa tolerance
 
-      if (paidAmount > finalTotalValue) {
+      if (paidAmount > (finalTotalValue + tolerance)) {
         e.preventDefault();
         alert('Paid amount cannot exceed the total amount');
         paidAmountInput.value = finalTotalValue.toFixed(2);
@@ -2471,164 +2465,33 @@
     });
   });
 
-  // DIRECT FIX FOR PAID AMOUNT - This code runs after everything else
+  // Simple paid amount validation
   document.addEventListener('DOMContentLoaded', function() {
-    // Get references to our elements
-    const paidAmountDisplay = document.getElementById('paidAmountDisplay');
-    const actualPaidAmount = document.getElementById('actualPaidAmount');
+    const paidAmountInput = document.getElementById('paidAmount');
     const totalAmountElement = document.getElementById('totalAmount');
-    const paidAmountFeedback = document.getElementById('paidAmountFeedback');
 
-    // Flag to track if user has manually edited the amount
-    let userHasEditedAmount = false;
-
-    // Function to update the total amount
-    function updateTotalDisplay() {
-      if (totalAmountElement) {
+    if (paidAmountInput && totalAmountElement) {
+      // Update paid amount when total changes
+      const updatePaidAmount = () => {
         const totalText = totalAmountElement.textContent;
         const totalValue = parseFloat(totalText.replace('₹', ''));
-
-        if (!isNaN(totalValue)) {
-          // If user hasn't edited, set paid amount to total
-          if (!userHasEditedAmount) {
-            paidAmountDisplay.value = totalValue.toFixed(2);
-            actualPaidAmount.value = totalValue.toFixed(2);
-            console.log('Set paid amount to total:', totalValue.toFixed(2));
-          }
+        if (!isNaN(totalValue) && !paidAmountInput.dataset.userEdited) {
+          paidAmountInput.value = totalValue.toFixed(2);
         }
-      }
-    }
+      };
 
-    // Set initial value
-    setTimeout(updateTotalDisplay, 1000);
-
-    // Handle user input in the paid amount field
-    paidAmountDisplay.addEventListener('input', function() {
-      userHasEditedAmount = true;
-
-      // Get the total amount
-      const totalText = totalAmountElement.textContent;
-      const totalValue = parseFloat(totalText.replace('₹', ''));
-
-      // Get the entered amount
-      let enteredValue = this.value.trim();
-
-      // Allow empty field or partial input during typing
-      if (enteredValue === '' || enteredValue === '.' || /^\d+\.$/.test(enteredValue)) {
-        paidAmountFeedback.style.display = 'none';
-        this.classList.remove('is-invalid');
-        actualPaidAmount.value = '0';
-        return;
-      }
-
-      // Parse the entered value
-      const paidValue = parseFloat(enteredValue);
-
-      // Validate the input
-      if (isNaN(paidValue)) {
-        this.classList.add('is-invalid');
-        paidAmountFeedback.textContent = 'Please enter a valid number';
-        paidAmountFeedback.style.display = 'block';
-        return;
-      }
-
-      // Check if paid amount exceeds total
-      if (paidValue > totalValue) {
-        this.value = totalValue.toFixed(2);
-        actualPaidAmount.value = totalValue.toFixed(2);
-        this.classList.add('is-invalid');
-        paidAmountFeedback.textContent = 'Paid amount cannot exceed the total amount';
-        paidAmountFeedback.style.display = 'block';
-      } else {
-        // Valid input
-        actualPaidAmount.value = paidValue.toFixed(2);
-        this.classList.remove('is-invalid');
-        paidAmountFeedback.style.display = 'none';
-      }
-    });
-
-    // Format the number when the field loses focus
-    paidAmountDisplay.addEventListener('blur', function() {
-      const value = parseFloat(this.value);
-      if (!isNaN(value)) {
-        this.value = value.toFixed(2);
-        actualPaidAmount.value = value.toFixed(2);
-      } else if (this.value.trim() === '') {
-        this.value = '0.00';
-        actualPaidAmount.value = '0.00';
-      }
-    });
-
-    // Override any other code that might try to change the paid amount
-    const originalSetAttribute = Element.prototype.setAttribute;
-    Element.prototype.setAttribute = function(name, value) {
-      // If this is the paid amount input and someone is trying to set its value
-      if (this === paidAmountDisplay && name === 'value' && userHasEditedAmount) {
-        console.log('Blocked attempt to change paid amount value to:', value);
-        return; // Block the change
-      }
-      // Otherwise, proceed normally
-      return originalSetAttribute.call(this, name, value);
-    };
-
-    // Also override the value setter for the paid amount input
-    let paidAmountDescriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
-    let originalValueSetter = paidAmountDescriptor.set;
-
-    Object.defineProperty(paidAmountDisplay, 'value', {
-      set: function(newValue) {
-        // If user has edited and some other code is trying to change it
-        if (userHasEditedAmount && newValue !== this.value &&
-            !document.activeElement === this) {
-          console.log('Blocked attempt to set paid amount to:', newValue);
-          return; // Block the change
-        }
-        // Otherwise, proceed normally
-        originalValueSetter.call(this, newValue);
-      },
-      get: paidAmountDescriptor.get
-    });
-
-    // Update the paid amount when the total changes
-    const observer = new MutationObserver(function(mutations) {
-      mutations.forEach(function(mutation) {
-        if (mutation.type === 'characterData' || mutation.type === 'childList') {
-          if (!userHasEditedAmount) {
-            updateTotalDisplay();
-          }
-        }
+      // Mark as user edited when user changes the value
+      paidAmountInput.addEventListener('input', function() {
+        this.dataset.userEdited = 'true';
       });
-    });
 
-    // Start observing the total amount element
-    if (totalAmountElement) {
-      observer.observe(totalAmountElement, {
-        characterData: true,
-        childList: true,
-        subtree: true
-      });
+      // Observe total amount changes
+      const observer = new MutationObserver(updatePaidAmount);
+      observer.observe(totalAmountElement, { childList: true, characterData: true, subtree: true });
+
+      // Initial update
+      setTimeout(updatePaidAmount, 1000);
     }
-
-    // Handle form submission
-    document.getElementById('billForm').addEventListener('submit', function(e) {
-      const paidValue = parseFloat(actualPaidAmount.value);
-      const totalText = totalAmountElement.textContent;
-      const totalValue = parseFloat(totalText.replace('₹', ''));
-
-      if (isNaN(paidValue)) {
-        e.preventDefault();
-        alert('Please enter a valid paid amount');
-        paidAmountDisplay.focus();
-        return false;
-      }
-
-      if (paidValue > totalValue) {
-        e.preventDefault();
-        alert('Paid amount cannot exceed the total amount');
-        paidAmountDisplay.focus();
-        return false;
-      }
-    });
   });
 </script>
 

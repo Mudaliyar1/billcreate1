@@ -130,6 +130,17 @@ const BillSchema = new mongoose.Schema({
     unique: true,
     sparse: true // This allows the field to be undefined during document creation
   },
+  billDate: {
+    type: Date,
+    default: Date.now,
+    validate: {
+      validator: function(value) {
+        // Don't allow future dates
+        return value <= new Date();
+      },
+      message: 'Bill date cannot be in the future'
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -140,9 +151,9 @@ const BillSchema = new mongoose.Schema({
 BillSchema.pre('save', async function(next) {
   if (this.isNew || !this.billNumber) {
     try {
-      // Find the highest bill number with the current year prefix
-      const currentYear = new Date().getFullYear();
-      const prefix = `KT-${currentYear}-`;
+      // Find the highest bill number with the bill date year prefix
+      const billYear = this.billDate ? new Date(this.billDate).getFullYear() : new Date().getFullYear();
+      const prefix = `KT-${billYear}-`;
 
       // Find the bill with the highest number for this year
       const highestBill = await mongoose.model('Bill')

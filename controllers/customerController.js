@@ -273,7 +273,7 @@ exports.getAddCustomer = (req, res) => {
 
 // Create new customer
 exports.postAddCustomer = async (req, res) => {
-  const { name, phone, place } = req.body;
+  const { name, phone, place, email } = req.body;
 
   try {
     // Validate input
@@ -294,7 +294,8 @@ exports.postAddCustomer = async (req, res) => {
     const customer = await Customer.create({
       name,
       phone,
-      place
+      place,
+      email: email || '' // Handle undefined email
     });
 
     req.flash('success', 'Customer added successfully');
@@ -332,7 +333,7 @@ exports.getEditCustomer = async (req, res) => {
 // Update customer
 exports.updateCustomer = async (req, res) => {
   try {
-    const { name, phone, place } = req.body;
+    const { name, phone, place, email } = req.body;
 
     // Validate input
     if (!name || !phone || !place) {
@@ -360,7 +361,7 @@ exports.updateCustomer = async (req, res) => {
     customer.name = name;
     customer.phone = phone;
     customer.place = place;
-    customer.email = email;
+    customer.email = email || ''; // Handle undefined email
     await customer.save();
 
     // Update customer info in bills
@@ -370,7 +371,7 @@ exports.updateCustomer = async (req, res) => {
         $set: {
           'customer.name': name,
           'customer.place': place,
-          'customer.email': email
+          'customer.email': email || ''
         }
       }
     );

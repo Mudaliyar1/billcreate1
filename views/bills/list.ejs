@@ -54,7 +54,7 @@
                         <tr>
                           <td><%= bill.billNumber %></td>
                           <td><%= bill.customer.name %></td>
-                          <td><%= new Date(bill.createdAt).toLocaleDateString() %></td>
+                          <td><%= new Date(bill.billDate || bill.createdAt).toLocaleDateString() %></td>
                           <td>₹<%= bill.totalAmount.toFixed(2) %></td>
                           <td>
                             <% if (bill.paymentType === 'Cash') { %>

@@ -150,10 +150,20 @@
                     <input type="text" class="form-control" id="gstPercentage" name="gstPercentage" value="<%= bill.gstPercentage || 12 %>" readonly>
                     <small class="form-text text-muted">GST percentage is set based on the selected GST type</small>
                   </div>
+                  <div class="col-md-6 mb-3 <%= bill.gstEnabled ? '' : 'd-none' %>" id="subtotalContainer">
+                    <label for="subtotal" class="form-label">Subtotal (₹)</label>
+                    <input type="text" class="form-control" id="subtotal" name="subtotal" value="<%= bill.subTotal ? bill.subTotal.toFixed(2) : bill.totalAmount.toFixed(2) %>" readonly>
+                    <small class="form-text text-muted">Amount before GST</small>
+                  </div>
                   <div class="col-md-6 mb-3 <%= bill.gstEnabled ? '' : 'd-none' %>" id="gstAmountContainer">
                     <label for="gstAmount" class="form-label">GST Amount (₹)</label>
                     <input type="text" class="form-control" id="gstAmount" name="gstAmount" value="<%= bill.gstAmount ? bill.gstAmount.toFixed(2) : '0.00' %>" readonly>
                     <small class="form-text text-muted">GST amount calculated based on subtotal</small>
+                  </div>
+                  <div class="col-md-6 mb-3 <%= bill.gstEnabled ? '' : 'd-none' %>" id="totalWithGstContainer">
+                    <label for="totalWithGst" class="form-label">Total Amount (Including GST) (₹)</label>
+                    <input type="text" class="form-control" id="totalWithGst" name="totalWithGst" value="<%= bill.gstEnabled ? bill.totalAmount.toFixed(2) : '0.00' %>" readonly>
+                    <small class="form-text text-muted">Total amount including GST (Subtotal + GST Amount)</small>
                   </div>
                 </div>
 
@@ -161,6 +171,15 @@
                 <div class="row mb-4">
                   <div class="col-12">
                     <h5>Payment Information</h5>
+                  </div>
+
+                  <div class="col-md-6 mb-3">
+                    <label for="billDate" class="form-label">Bill Date</label>
+                    <input type="date" class="form-control" id="billDate" name="billDate"
+                           max="<%= new Date().toISOString().split('T')[0] %>"
+                           value="<%= bill.billDate ? bill.billDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0] %>"
+                           required>
+                    <small class="form-text text-muted">Select the date for this bill (cannot be future date)</small>
                   </div>
 
                   <input type="hidden" id="paymentType" name="paymentType" value="Cash">
@@ -209,8 +228,9 @@
       return;
     }
 
-    // Check if paid amount exceeds total
-    if (paidValue > totalAmount) {
+    // Check if paid amount exceeds total (with tolerance for floating-point precision)
+    const tolerance = 0.01; // 1 paisa tolerance
+    if (paidValue > (totalAmount + tolerance)) {
       input.value = totalAmount.toFixed(2); // Reset to max allowed value
       input.classList.add('is-invalid');
 
@@ -253,7 +273,10 @@
 
     // Update total amount (for display only, not changing the actual bill total)
     const totalWithGst = subtotal + gstAmount;
-    document.getElementById('totalWithGst').textContent = '₹' + totalWithGst.toFixed(2);
+    const totalWithGstInput = document.getElementById('totalWithGst');
+    if (totalWithGstInput) {
+      totalWithGstInput.value = totalWithGst.toFixed(2);
+    }
   }
 
   document.addEventListener('DOMContentLoaded', function() {
@@ -261,7 +284,9 @@
     const gstEnabledCheckbox = document.getElementById('gstEnabled');
     const gstTypeContainer = document.getElementById('gstTypeContainer');
     const gstPercentageContainer = document.getElementById('gstPercentageContainer');
+    const subtotalContainer = document.getElementById('subtotalContainer');
     const gstAmountContainer = document.getElementById('gstAmountContainer');
+    const totalWithGstContainer = document.getElementById('totalWithGstContainer');
     const gstTypeSelect = document.getElementById('gstType');
 
     // Set the paid amount to the total amount if it's not already set
@@ -287,14 +312,18 @@
         if (this.checked) {
           gstTypeContainer.classList.remove('d-none');
           gstPercentageContainer.classList.remove('d-none');
+          subtotalContainer.classList.remove('d-none');
           gstAmountContainer.classList.remove('d-none');
+          totalWithGstContainer.classList.remove('d-none');
 
           // Calculate GST amount
           calculateGstAmount();
         } else {
           gstTypeContainer.classList.add('d-none');
           gstPercentageContainer.classList.add('d-none');
+          subtotalContainer.classList.add('d-none');
           gstAmountContainer.classList.add('d-none');
+          totalWithGstContainer.classList.add('d-none');
         }
       });
     }
@@ -302,6 +331,21 @@
     // Calculate GST amount on page load if GST is enabled
     if (gstEnabledCheckbox && gstEnabledCheckbox.checked) {
       calculateGstAmount();
+    }
+
+    // Add validation for bill date
+    const billDateInput = document.getElementById('billDate');
+    if (billDateInput) {
+      billDateInput.addEventListener('change', function() {
+        const selectedDate = new Date(this.value);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // Set to end of today
+
+        if (selectedDate > today) {
+          alert('Bill date cannot be in the future. Please select today or a past date.');
+          this.value = '<%= bill.billDate ? bill.billDate.toISOString().split("T")[0] : new Date().toISOString().split("T")[0] %>'; // Reset to original or today
+        }
+      });
     }
   });
 </script>
