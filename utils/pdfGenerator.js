@@ -3,6 +3,101 @@ const fs = require('fs');
 const path = require('path');
 const { generateUpiQRCodeDataURL } = require('./generateQRCode');
 
+// Register the Hindi font - try multiple font options
+const fontOptions = [
+  path.join(__dirname, '../fonts/NotoSansDevanagari-Regular.ttf'),
+  path.join(__dirname, '../fonts/Lohit-Devanagari.ttf'),
+  path.join(__dirname, '../fonts/Tinos-Regular.ttf')
+];
+
+// Find the first available font
+let hindiFont = null;
+for (const fontPath of fontOptions) {
+  if (fs.existsSync(fontPath)) {
+    hindiFont = fontPath;
+    break;
+  }
+}
+
+// Helper function to detect if text contains Hindi/Devanagari characters
+const containsHindi = (text) => {
+  if (!text) return false;
+  // Devanagari Unicode range: U+0900–U+097F
+  return /[\u0900-\u097F]/.test(text);
+};
+
+// Simple transliteration map for common Hindi characters to Roman
+const hindiToRoman = {
+  'अ': 'a', 'आ': 'aa', 'इ': 'i', 'ई': 'ii', 'उ': 'u', 'ऊ': 'uu', 'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au',
+  'क': 'ka', 'ख': 'kha', 'ग': 'ga', 'घ': 'gha', 'च': 'cha', 'छ': 'chha', 'ज': 'ja', 'झ': 'jha',
+  'ट': 'ta', 'ठ': 'tha', 'ड': 'da', 'ढ': 'dha', 'त': 'ta', 'थ': 'tha', 'द': 'da', 'ध': 'dha',
+  'न': 'na', 'प': 'pa', 'फ': 'pha', 'ब': 'ba', 'भ': 'bha', 'म': 'ma', 'य': 'ya', 'र': 'ra',
+  'ल': 'la', 'व': 'va', 'श': 'sha', 'ष': 'sha', 'स': 'sa', 'ह': 'ha',
+  'ा': 'aa', 'ि': 'i', 'ी': 'ii', 'ु': 'u', 'ू': 'uu', 'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au',
+  '्': '', 'ं': 'n', 'ः': 'h', '।': '.', 'ॐ': 'Om'
+};
+
+// Function to transliterate Hindi text to Roman characters
+const transliterateHindi = (text) => {
+  if (!text || !containsHindi(text)) return text;
+
+  let result = '';
+  for (let char of text) {
+    if (hindiToRoman[char]) {
+      result += hindiToRoman[char];
+    } else if (/[\u0900-\u097F]/.test(char)) {
+      // If it's a Hindi character not in our map, keep it as is
+      result += char;
+    } else {
+      // Non-Hindi characters (English, numbers, symbols) pass through
+      result += char;
+    }
+  }
+  return result;
+};
+
+// Helper function to set appropriate font and prepare text for PDF
+const setFontAndText = (doc, text, style = 'regular') => {
+  let processedText = text;
+
+  if (containsHindi(text)) {
+    if (hindiFont) {
+      // Try to use Hindi font for Devanagari text
+      try {
+        doc.font(hindiFont);
+        console.log(`Using Hindi font: ${hindiFont}`);
+        return { doc, text: processedText };
+      } catch (error) {
+        console.warn('Error loading Hindi font, using transliteration:', error.message);
+        processedText = transliterateHindi(text);
+      }
+    } else {
+      console.warn('Hindi text detected but no suitable font available, using transliteration');
+      processedText = transliterateHindi(text);
+    }
+  }
+
+  // Use default fonts for English text or transliterated text
+  switch (style) {
+    case 'bold':
+      doc.font('Helvetica-Bold');
+      break;
+    case 'italic':
+      doc.font('Helvetica-Oblique');
+      break;
+    default:
+      doc.font('Helvetica');
+  }
+
+  return { doc, text: processedText };
+};
+
+// Backward compatibility function
+const setFont = (doc, text, style = 'regular') => {
+  const result = setFontAndText(doc, text, style);
+  return result.doc;
+};
+
 // Define colors
 const primaryColor = '#2A9D8F';
 const secondaryColor = '#264653';
@@ -86,12 +181,23 @@ const generateBillPDF = (bill, filePath) => {
 
       doc.fontSize(12)
          .font('Helvetica-Bold')
-         .text('BILL TO', 40, billingY + 20)
-         .font('Helvetica')
-         .text(bill.customer.name, 40, billingY + 40)
-         .text(`Phone: ${bill.customer.phone}`, 40, billingY + 60)
-         .text(`Place: ${bill.customer.place}`, 40, billingY + 80)
-         .text(`Work: ${bill.work}`, 40, billingY + 100);
+         .text('BILL TO', 40, billingY + 20);
+
+      // Customer name with Hindi support
+      const customerNameResult = setFontAndText(doc, bill.customer.name);
+      customerNameResult.doc.text(customerNameResult.text, 40, billingY + 40);
+
+      // Phone (always English)
+      doc.font('Helvetica')
+         .text(`Phone: ${bill.customer.phone}`, 40, billingY + 60);
+
+      // Place with Hindi support
+      const placeResult = setFontAndText(doc, bill.customer.place);
+      placeResult.doc.text(`Place: ${placeResult.text}`, 40, billingY + 80);
+
+      // Work with Hindi support
+      const workResult = setFontAndText(doc, bill.work);
+      workResult.doc.text(`Work: ${workResult.text}`, 40, billingY + 100);
 
       // Work details
       doc.font('Helvetica-Bold')
@@ -122,9 +228,14 @@ const generateBillPDF = (bill, filePath) => {
       const rowHeight = 25;
 
       bill.items.forEach((item, index) => {
-        doc.fontSize(10)
-           .font('Helvetica')
-           .text(item.name, 40, currentY)
+        doc.fontSize(10);
+
+        // Product name with Hindi support
+        const itemNameResult = setFontAndText(doc, item.name);
+        itemNameResult.doc.text(itemNameResult.text, 40, currentY);
+
+        // Category (usually English)
+        doc.font('Helvetica')
            .text(item.category, 180, currentY)
            .text(`₹${item.price.toFixed(2)}`, 320, currentY)
            .text(item.quantity.toString(), 400, currentY)
@@ -342,12 +453,23 @@ const generateReturnBillPDF = (returnBill, filePath) => {
 
       doc.fontSize(12)
          .font('Helvetica-Bold')
-         .text('CUSTOMER', 40, billingY + 20)
-         .font('Helvetica')
-         .text(returnBill.customer.name, 40, billingY + 40)
-         .text(`Phone: ${returnBill.customer.phone}`, 40, billingY + 60)
-         .text(`Place: ${returnBill.customer.place}`, 40, billingY + 80)
-         .text(`Return Reason: ${returnBill.reason}`, 40, billingY + 100);
+         .text('CUSTOMER', 40, billingY + 20);
+
+      // Customer name with Hindi support
+      const returnCustomerNameResult = setFontAndText(doc, returnBill.customer.name);
+      returnCustomerNameResult.doc.text(returnCustomerNameResult.text, 40, billingY + 40);
+
+      // Phone (always English)
+      doc.font('Helvetica')
+         .text(`Phone: ${returnBill.customer.phone}`, 40, billingY + 60);
+
+      // Place with Hindi support
+      const returnPlaceResult = setFontAndText(doc, returnBill.customer.place);
+      returnPlaceResult.doc.text(`Place: ${returnPlaceResult.text}`, 40, billingY + 80);
+
+      // Return reason with Hindi support
+      const returnReasonResult = setFontAndText(doc, returnBill.reason);
+      returnReasonResult.doc.text(`Return Reason: ${returnReasonResult.text}`, 40, billingY + 100);
 
       // Return details
       doc.font('Helvetica-Bold')
@@ -385,9 +507,14 @@ const generateReturnBillPDF = (returnBill, filePath) => {
       const rowHeight = 25;
 
       returnBill.items.forEach((item, index) => {
-        doc.fontSize(10)
-           .font('Helvetica')
-           .text(item.name, 40, currentY)
+        doc.fontSize(10);
+
+        // Product name with Hindi support
+        const returnItemNameResult = setFontAndText(doc, item.name);
+        returnItemNameResult.doc.text(returnItemNameResult.text, 40, currentY);
+
+        // Category (usually English)
+        doc.font('Helvetica')
            .text(item.category, 180, currentY)
            .text(item.quantity.toString(), 400, currentY);
 
