@@ -2319,8 +2319,35 @@
 
     // Form validation before submission
     document.getElementById('billForm').addEventListener('submit', function(e) {
-      // DIRECT FIX: Force recalculation of total amount before submission
+      console.log('=== FORM SUBMISSION DEBUG ===');
+
+      // Debug: Log all form data before submission
+      const formData = new FormData(this);
+      console.log('Form data being submitted:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}: ${value}`);
+      }
+
+      // Debug: Check all product rows
       const productRows = document.querySelectorAll('.product-row');
+      console.log(`Total product rows found: ${productRows.length}`);
+
+      productRows.forEach((row, index) => {
+        const productSelect = row.querySelector('.product-select');
+        const quantityInput = row.querySelector('.quantity-input');
+
+        console.log(`Row ${index + 1}:`, {
+          hasProductSelect: !!productSelect,
+          productValue: productSelect ? productSelect.value : 'N/A',
+          productName: productSelect && productSelect.selectedIndex > 0 ? productSelect.options[productSelect.selectedIndex].textContent : 'N/A',
+          hasQuantityInput: !!quantityInput,
+          quantityValue: quantityInput ? quantityInput.value : 'N/A',
+          isRowVisible: row.style.display !== 'none',
+          isSelectDisabled: productSelect ? productSelect.disabled : 'N/A'
+        });
+      });
+
+      // DIRECT FIX: Force recalculation of total amount before submission
       let total = 0;
 
       productRows.forEach(row => {
@@ -2394,31 +2421,73 @@
         return false;
       }
 
-      // Check if at least one product is selected
+      // IMPROVED FIX: More careful validation and disabling of empty product rows
+      console.log('=== VALIDATING PRODUCT ROWS ===');
       const productSelects = document.querySelectorAll('.product-select');
       let hasSelectedProduct = false;
       let emptySelectIndex = -1;
+      const validRows = [];
+      const emptyRows = [];
 
       productSelects.forEach((select, index) => {
-        // Check if the select is visible (parent row is not hidden)
         const row = select.closest('.product-row');
-        const isVisible = row && window.getComputedStyle(row).display !== 'none';
+        const quantityInput = row.querySelector('.quantity-input');
 
-        if (isVisible && !select.disabled) {
-          if (select.value) {
+        // Check if the select is visible and has a value
+        const isVisible = row && window.getComputedStyle(row).display !== 'none';
+        const hasValue = select.value && select.value.trim() !== '' && select.selectedIndex > 0;
+        const hasQuantity = quantityInput && quantityInput.value && parseInt(quantityInput.value) > 0;
+
+        console.log(`Row ${index + 1} analysis:`, {
+          isVisible,
+          selectValue: select.value,
+          selectedIndex: select.selectedIndex,
+          hasValue,
+          quantityValue: quantityInput ? quantityInput.value : 'N/A',
+          hasQuantity,
+          isDisabled: select.disabled
+        });
+
+        if (isVisible) {
+          if (hasValue && hasQuantity) {
             hasSelectedProduct = true;
-          } else if (emptySelectIndex === -1) {
-            emptySelectIndex = index;
+            validRows.push({ select, quantityInput, index });
+            console.log(`Row ${index + 1}: VALID - Product: ${select.value}, Quantity: ${quantityInput.value}`);
+          } else {
+            emptyRows.push({ select, quantityInput, index });
+            console.log(`Row ${index + 1}: EMPTY - Will be disabled`);
+            if (emptySelectIndex === -1) {
+              emptySelectIndex = index;
+            }
           }
         }
       });
+
+      // Only disable truly empty rows, keep valid rows enabled
+      validRows.forEach(({ select, quantityInput, index }) => {
+        select.disabled = false;
+        if (quantityInput) quantityInput.disabled = false;
+        console.log(`Row ${index + 1}: Keeping enabled (valid product)`);
+      });
+
+      emptyRows.forEach(({ select, quantityInput, index }) => {
+        select.disabled = true;
+        if (quantityInput) quantityInput.disabled = true;
+        console.log(`Row ${index + 1}: Disabling (empty row)`);
+      });
+
+      console.log(`Summary: ${validRows.length} valid rows, ${emptyRows.length} empty rows`);
 
       if (!hasSelectedProduct) {
         e.preventDefault();
         alert('Please select at least one product');
 
-        // Focus on the first empty select
+        // Re-enable the first empty select for user interaction
         if (emptySelectIndex !== -1 && productSelects[emptySelectIndex]) {
+          productSelects[emptySelectIndex].disabled = false;
+          const row = productSelects[emptySelectIndex].closest('.product-row');
+          const quantityInput = row.querySelector('.quantity-input');
+          if (quantityInput) quantityInput.disabled = false;
           productSelects[emptySelectIndex].focus();
         }
 
@@ -2455,6 +2524,26 @@
         paidAmountInput.focus();
         return false;
       }
+
+      // FINAL SAFETY CHECK: Log what will actually be submitted
+      console.log('=== FINAL FORM SUBMISSION CHECK ===');
+      const finalFormData = new FormData(document.getElementById('billForm'));
+      console.log('Final form data that will be submitted:');
+      for (let [key, value] of finalFormData.entries()) {
+        console.log(`${key}: ${value}`);
+      }
+
+      // Count valid products one more time
+      const finalProductIds = finalFormData.getAll('productIds[]').filter(id => id && id.trim() !== '');
+      const finalQuantities = finalFormData.getAll('quantities[]').filter(qty => qty && parseInt(qty) > 0);
+
+      console.log('Final product validation:', {
+        productIds: finalProductIds,
+        quantities: finalQuantities,
+        productCount: finalProductIds.length,
+        quantityCount: finalQuantities.length,
+        arraysMatch: finalProductIds.length === finalQuantities.length
+      });
 
       // All validations passed
       return true;
