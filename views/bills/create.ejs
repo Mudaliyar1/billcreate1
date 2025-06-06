@@ -689,6 +689,15 @@
                             <h3 class="mb-0" id="totalAmount">₹0.00</h3>
                           </div>
                         </div>
+                        <hr class="my-2">
+                        <div class="row align-items-center">
+                          <div class="col-md-6">
+                            <h6 class="mb-0 text-success">Remaining Amount:</h6>
+                          </div>
+                          <div class="col-md-6 text-end">
+                            <h6 class="mb-0 text-success" id="remainingAmount">₹0.00</h6>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -711,10 +720,58 @@
 </div>
 
 <script>
-  // Simple bill creation script
+  // Bill creation script with proper paid amount handling
   let userEditedPaidAmount = false;
+  let userPaidAmount = null;
 
-  // Simple function to update paid amount when total changes
+  // Function to handle paid amount validation and remaining amount calculation
+  function handlePaidAmountChange(input) {
+    const totalElement = document.getElementById('totalAmount');
+    if (!totalElement) return;
+
+    const totalText = totalElement.textContent;
+    const totalValue = parseFloat(totalText.replace('₹', ''));
+    const paidValue = parseFloat(input.value) || 0;
+
+    // Validate that paid amount doesn't exceed total
+    if (paidValue > totalValue) {
+      input.setCustomValidity(`Paid amount cannot exceed total amount of ₹${totalValue.toFixed(2)}`);
+      document.getElementById('paidAmountFeedback').style.display = 'block';
+    } else {
+      input.setCustomValidity('');
+      document.getElementById('paidAmountFeedback').style.display = 'none';
+    }
+
+    // Store the user's input
+    userPaidAmount = paidValue;
+
+    // Update remaining amount
+    updateRemainingAmount();
+  }
+
+  // Function to update remaining amount display
+  function updateRemainingAmount() {
+    const totalElement = document.getElementById('totalAmount');
+    const paidInput = document.getElementById('paidAmount');
+    const remainingElement = document.getElementById('remainingAmount');
+
+    if (!totalElement || !paidInput || !remainingElement) return;
+
+    const totalValue = parseFloat(totalElement.textContent.replace('₹', '')) || 0;
+    const paidValue = parseFloat(paidInput.value) || 0;
+    const remainingValue = Math.max(0, totalValue - paidValue);
+
+    remainingElement.textContent = '₹' + remainingValue.toFixed(2);
+
+    // Change color based on remaining amount
+    if (remainingValue === 0) {
+      remainingElement.className = 'mb-0 text-success';
+    } else {
+      remainingElement.className = 'mb-0 text-warning';
+    }
+  }
+
+  // Function to update paid amount when total changes (only if user hasn't edited it)
   function updatePaidAmount() {
     const totalElement = document.getElementById('totalAmount');
     const paidInput = document.getElementById('paidAmount');
@@ -724,16 +781,29 @@
       const totalValue = parseFloat(totalText.replace('₹', ''));
       if (!isNaN(totalValue)) {
         paidInput.value = totalValue.toFixed(2);
+        userPaidAmount = totalValue;
       }
     }
+
+    // Always update remaining amount when total changes
+    updateRemainingAmount();
   }
 
-  // Mark when user manually edits paid amount
+  // Initialize when DOM is loaded
   document.addEventListener('DOMContentLoaded', function() {
     const paidInput = document.getElementById('paidAmount');
     if (paidInput) {
+      // Handle user input
       paidInput.addEventListener('input', function() {
         userEditedPaidAmount = true;
+        handlePaidAmountChange(this);
+      });
+
+      // Handle focus to mark as user-edited
+      paidInput.addEventListener('focus', function() {
+        if (!userEditedPaidAmount) {
+          userEditedPaidAmount = true;
+        }
       });
     }
 
@@ -926,18 +996,8 @@
         totalAmountElement.textContent = '₹' + total.toFixed(2);
         console.log(`Updated total amount display to: ${total.toFixed(2)}`);
 
-        // Also update the paid amount input
-        const paidAmountInput = document.getElementById('paidAmount');
-        if (paidAmountInput) {
-          // Only update if user hasn't manually edited it
-          if (!userEditedPaidAmount) {
-            paidAmountInput.value = total.toFixed(2);
-          } else if (userPaidAmount !== null) {
-            // If user has edited, cap at total if needed
-            const valueToSet = Math.min(userPaidAmount, total);
-            paidAmountInput.value = valueToSet.toFixed(2);
-          }
-        }
+        // Update the paid amount input using the centralized function
+        updatePaidAmount();
 
         // Add hidden input for subtotal
         let subtotalInput = document.getElementById('subtotalInput');
@@ -1166,18 +1226,8 @@
 
     totalAmountElement.textContent = '₹' + total.toFixed(2);
 
-    // Update paid amount input
-    const paidAmountInput = document.getElementById('paidAmount');
-    if (paidAmountInput) {
-      // Only update if user hasn't manually edited
-      if (!userEditedPaidAmount) {
-        paidAmountInput.value = total.toFixed(2);
-      } else if (userPaidAmount !== null) {
-        // If user has edited, cap at total if needed
-        const valueToSet = Math.min(userPaidAmount, total);
-        paidAmountInput.value = valueToSet.toFixed(2);
-      }
-    }
+    // Update paid amount input using centralized function
+    updatePaidAmount();
 
     // Add hidden input for subtotal
     let subtotalInput = document.getElementById('subtotalInput');
@@ -1705,26 +1755,8 @@
             console.log('DIRECT FIX: Total amount updated to:', total.toFixed(2));
           }
 
-          // Update paid amount input
-          const paidAmountInput = document.getElementById('paidAmount');
-          if (paidAmountInput) {
-            // Only update the value if the user hasn't manually edited it
-            if (!userEditedPaidAmount) {
-              paidAmountInput.value = total.toFixed(2);
-              console.log('Setting initial paid amount to total:', total.toFixed(2));
-            } else if (userPaidAmount !== null) {
-              // If user has edited, keep their value (but cap at total if it exceeds)
-              if (userPaidAmount > total) {
-                paidAmountInput.value = total.toFixed(2);
-                userPaidAmount = total;
-                console.log('Capping user paid amount to total:', total.toFixed(2));
-              } else {
-                // Keep the user's value
-                paidAmountInput.value = userPaidAmount.toFixed(2);
-                console.log('Preserving user paid amount:', userPaidAmount.toFixed(2));
-              }
-            }
-          }
+          // Update paid amount input using centralized function
+          updatePaidAmount();
         });
       });
     }, 500);
@@ -1774,27 +1806,8 @@
     // Get reference to the paid amount input
     const paidAmountInput = document.getElementById('paidAmount');
 
-    // Add dedicated event listeners to the paid amount input to ensure it captures all user edits
+    // Event listeners are already set up in the main DOMContentLoaded handler above
     if (paidAmountInput) {
-      // Input event - fires when the value changes
-      paidAmountInput.addEventListener('input', function() {
-        userEditedPaidAmount = true;
-        userPaidAmount = parseFloat(this.value) || 0;
-        console.log('User edited paid amount to:', userPaidAmount);
-
-        // Validate the amount
-        handlePaidAmountChange(this);
-      });
-
-      // Focus event - fires when the field gets focus
-      paidAmountInput.addEventListener('focus', function() {
-        // Store the current value when the field gets focus
-        const currentValue = parseFloat(this.value) || 0;
-        if (!userEditedPaidAmount) {
-          userPaidAmount = currentValue;
-        }
-      });
-
       // Blur event - fires when the field loses focus
       paidAmountInput.addEventListener('blur', function() {
         if (this.value.trim() === '') {
@@ -1930,18 +1943,8 @@
             totalAmountElement.textContent = '₹' + subtotal.toFixed(2);
             console.log('Updated total amount to subtotal:', subtotal.toFixed(2));
 
-            // Update paid amount
-            if (paidAmountInput) {
-              if (!userEditedPaidAmount) {
-                paidAmountInput.value = subtotal.toFixed(2);
-                console.log('Updated paid amount to subtotal:', subtotal.toFixed(2));
-              } else {
-                // Cap at subtotal if needed
-                const valueToSet = Math.min(userPaidAmount, subtotal);
-                paidAmountInput.value = valueToSet.toFixed(2);
-                console.log('Updated paid amount to user value (capped):', valueToSet.toFixed(2));
-              }
-            }
+            // Update paid amount using centralized function
+            updatePaidAmount();
           }
         }
       });
@@ -2235,9 +2238,8 @@
       if (paidAmountInput) {
         paidAmountInput.setAttribute('max', total.toFixed(2));
 
-        // Set the value to the total by default
-        paidAmountInput.value = total.toFixed(2);
-        console.log(`Updated paid amount input to: ${total.toFixed(2)}`);
+        // Use centralized function to update paid amount
+        updatePaidAmount();
       }
 
       // CRITICAL FIX: Force update the total amount display again
@@ -2247,10 +2249,8 @@
           totalElement.textContent = '₹' + total.toFixed(2);
           console.log(`CRITICAL FIX: Forced total amount update to: ${total.toFixed(2)}`);
 
-          // Also update paid amount
-          if (paidAmountInput) {
-            paidAmountInput.value = total.toFixed(2);
-          }
+          // Update paid amount using centralized function
+          updatePaidAmount();
         }
       }, 50);
 
@@ -2313,12 +2313,8 @@
         console.log(`Directly set total amount to: ₹${total.toFixed(2)}`);
       }
 
-      // Update paid amount input
-      const paidAmountInput = document.getElementById('paidAmount');
-      if (paidAmountInput) {
-        paidAmountInput.setAttribute('max', total.toFixed(2));
-        paidAmountInput.value = total.toFixed(2);
-      }
+      // Update paid amount input using centralized function
+      updatePaidAmount();
     }, 1000);
 
     // Form validation before submission
@@ -2465,366 +2461,17 @@
     });
   });
 
-  // Simple paid amount validation
-  document.addEventListener('DOMContentLoaded', function() {
-    const paidAmountInput = document.getElementById('paidAmount');
-    const totalAmountElement = document.getElementById('totalAmount');
-
-    if (paidAmountInput && totalAmountElement) {
-      // Update paid amount when total changes
-      const updatePaidAmount = () => {
-        const totalText = totalAmountElement.textContent;
-        const totalValue = parseFloat(totalText.replace('₹', ''));
-        if (!isNaN(totalValue) && !paidAmountInput.dataset.userEdited) {
-          paidAmountInput.value = totalValue.toFixed(2);
-        }
-      };
-
-      // Mark as user edited when user changes the value
-      paidAmountInput.addEventListener('input', function() {
-        this.dataset.userEdited = 'true';
-      });
-
-      // Observe total amount changes
-      const observer = new MutationObserver(updatePaidAmount);
-      observer.observe(totalAmountElement, { childList: true, characterData: true, subtree: true });
-
-      // Initial update
-      setTimeout(updatePaidAmount, 1000);
-    }
-  });
+  // Duplicate paid amount validation removed - using main handler above
 </script>
 
 <%- include('../partials/footer') %>
 
-<script>
-  // Immediate script to fix total amount calculation
-  // DIRECT FIX: Force update total amount immediately
-  function updateTotalNow() {
-    console.log('DIRECT FIX: Forcing immediate total update');
-    const rows = document.querySelectorAll('.product-row');
-    let total = 0;
+<!-- All conflicting JavaScript code removed to prevent paid amount field issues -->
 
-    rows.forEach(row => {
-      const select = row.querySelector('.product-select');
-      const quantity = row.querySelector('.quantity-input');
-      const amount = row.querySelector('.product-amount');
+<!-- Removed conflicting DOM content loaded handler -->
 
-      if (select && select.selectedIndex > 0) {
-        const option = select.options[select.selectedIndex];
-        const price = parseFloat(option.dataset.price || option.getAttribute('data-price'));
-        const qty = parseInt(quantity.value || 1);
+<!-- Removed conflicting event listener -->
 
-        if (!isNaN(price) && !isNaN(qty)) {
-          const rowTotal = price * qty;
-          amount.value = '₹' + rowTotal.toFixed(2);
-          total += rowTotal;
-        }
-      }
-    });
+<!-- Removed conflicting timeout function -->
 
-    const totalElement = document.getElementById('totalAmount');
-    if (totalElement) {
-      totalElement.textContent = '₹' + total.toFixed(2);
-      console.log('DIRECT UPDATE: Total set to ' + total.toFixed(2));
-    }
-
-    const paidInput = document.getElementById('paidAmount');
-    if (paidInput) {
-      paidInput.setAttribute('max', total.toFixed(2));
-      paidInput.value = total.toFixed(2);
-    }
-  }
-
-  // Call the update function immediately
-  setTimeout(updateTotalNow, 100);
-  setTimeout(updateTotalNow, 500);
-  setTimeout(updateTotalNow, 1000);
-
-  // CRITICAL FIX: Add direct event listener to product select elements
-  document.addEventListener('click', function(event) {
-    // Check if we clicked on or near a product select
-    const productRow = event.target.closest('.product-row');
-    if (productRow) {
-      console.log('Clicked in product row, forcing update');
-      setTimeout(updateTotalNow, 50);
-    }
-  });
-
-  // CRITICAL FIX: Add MutationObserver to detect when products are loaded
-  const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-        // Check if any product selects were added
-        const productSelects = document.querySelectorAll('.product-select');
-        if (productSelects.length > 0) {
-          console.log('Product selects detected, forcing update');
-          setTimeout(updateTotalNow, 50);
-
-          // Add direct event listeners to all product selects
-          productSelects.forEach(select => {
-            if (!select.dataset.listenerAdded) {
-              select.dataset.listenerAdded = 'true';
-              select.addEventListener('change', function() {
-                console.log('Product select changed directly');
-                setTimeout(updateTotalNow, 50);
-              });
-            }
-          });
-        }
-      }
-    });
-  });
-
-  // Start observing the document
-  observer.observe(document.body, { childList: true, subtree: true });
-
-  document.addEventListener('DOMContentLoaded', function() {
-    // Call the update function when DOM is loaded
-    updateTotalNow();
-    // IMMEDIATE FIX: Force update total amount as soon as the page loads
-    setTimeout(function() {
-      console.log('IMMEDIATE FIX: Forcing total amount update');
-      const productRows = document.querySelectorAll('.product-row');
-      let total = 0;
-
-      productRows.forEach(row => {
-        const productSelect = row.querySelector('.product-select');
-        const quantityInput = row.querySelector('.quantity-input');
-        const amountInput = row.querySelector('.product-amount');
-
-        if (productSelect && productSelect.selectedIndex > 0) {
-          const selectedOption = productSelect.options[productSelect.selectedIndex];
-          const price = parseFloat(selectedOption.dataset.price || selectedOption.getAttribute('data-price'));
-          const quantity = parseInt(quantityInput.value || 1);
-
-          console.log('Selected product:', selectedOption.textContent);
-          console.log('Price:', price);
-          console.log('Quantity:', quantity);
-
-          if (!isNaN(price) && !isNaN(quantity)) {
-            const amount = price * quantity;
-            amountInput.value = '₹' + amount.toFixed(2);
-            total += amount;
-            console.log('Row amount:', amount);
-          }
-        }
-      });
-
-      // Update total amount display
-      const totalAmountElement = document.getElementById('totalAmount');
-      if (totalAmountElement) {
-        totalAmountElement.textContent = '₹' + total.toFixed(2);
-        console.log('IMMEDIATE FIX: Total amount set to:', total.toFixed(2));
-      }
-
-      // Update paid amount input
-      const paidAmountInput = document.getElementById('paidAmount');
-      if (paidAmountInput) {
-        paidAmountInput.setAttribute('max', total.toFixed(2));
-        paidAmountInput.value = total.toFixed(2);
-      }
-    }, 100);
-
-    // Add a direct event listener to update total when a product is selected
-    document.addEventListener('change', function(e) {
-      if (e.target && (e.target.classList.contains('product-select') || e.target.classList.contains('quantity-input'))) {
-        console.log('Product or quantity changed, updating total immediately');
-        setTimeout(function() {
-          // Get all product rows
-          const productRows = document.querySelectorAll('.product-row');
-          let total = 0;
-
-          productRows.forEach(row => {
-            const productSelect = row.querySelector('.product-select');
-            const quantityInput = row.querySelector('.quantity-input');
-
-            if (productSelect && productSelect.selectedIndex > 0) {
-              const selectedOption = productSelect.options[productSelect.selectedIndex];
-              const price = parseFloat(selectedOption.dataset.price);
-              const quantity = parseInt(quantityInput.value || 1);
-
-              if (!isNaN(price) && !isNaN(quantity)) {
-                total += price * quantity;
-              }
-            }
-          });
-
-          // Update total amount display
-          const totalAmountElement = document.getElementById('totalAmount');
-          if (totalAmountElement) {
-            totalAmountElement.textContent = '₹' + total.toFixed(2);
-            console.log(`DIRECT EVENT: Set total amount to: ₹${total.toFixed(2)}`);
-          }
-
-          // Update paid amount input
-          const paidAmountInput = document.getElementById('paidAmount');
-          if (paidAmountInput) {
-            paidAmountInput.setAttribute('max', total.toFixed(2));
-            paidAmountInput.value = total.toFixed(2);
-          }
-        }, 50);
-      }
-    });
-
-    // Run this after a short delay to ensure all elements are loaded
-    setTimeout(function() {
-      console.log('Running immediate total amount fix...');
-
-      // Get all product rows
-      const productRows = document.querySelectorAll('.product-row');
-      let total = 0;
-
-      productRows.forEach(row => {
-        const productSelect = row.querySelector('.product-select');
-        const quantityInput = row.querySelector('.quantity-input');
-        const amountInput = row.querySelector('.product-amount');
-
-        if (productSelect && productSelect.selectedIndex > 0) {
-          const selectedOption = productSelect.options[productSelect.selectedIndex];
-          const price = parseFloat(selectedOption.dataset.price);
-          const quantity = parseInt(quantityInput.value || 1);
-
-          console.log('Found selected product:', {
-            name: selectedOption.textContent,
-            price: price,
-            quantity: quantity
-          });
-
-          if (!isNaN(price) && !isNaN(quantity)) {
-            const amount = price * quantity;
-            amountInput.value = '₹' + amount.toFixed(2);
-            total += amount;
-            console.log(`Added ${amount.toFixed(2)} to total, now: ${total.toFixed(2)}`);
-          }
-        }
-      });
-
-      // Update total amount display
-      const totalAmountElement = document.getElementById('totalAmount');
-      if (totalAmountElement) {
-        totalAmountElement.textContent = '₹' + total.toFixed(2);
-        console.log(`FIXED: Set total amount to: ₹${total.toFixed(2)}`);
-      }
-
-      // Update paid amount input
-      const paidAmountInput = document.getElementById('paidAmount');
-      if (paidAmountInput) {
-        paidAmountInput.setAttribute('max', total.toFixed(2));
-        paidAmountInput.value = total.toFixed(2);
-        console.log(`Set paid amount to: ${total.toFixed(2)}`);
-      }
-    }, 500);
-
-    // Add event listeners to all product selects to update total immediately
-    document.addEventListener('change', function(e) {
-      if (e.target && e.target.classList.contains('product-select')) {
-        console.log('Product select changed, updating total immediately');
-        setTimeout(updateTotalImmediately, 50);
-      }
-    });
-
-    // Function to immediately update total when a product is selected
-    function updateTotalImmediately() {
-      const productRows = document.querySelectorAll('.product-row');
-      let total = 0;
-
-      productRows.forEach(row => {
-        const productSelect = row.querySelector('.product-select');
-        const quantityInput = row.querySelector('.quantity-input');
-        const amountInput = row.querySelector('.product-amount');
-
-        if (productSelect && productSelect.selectedIndex > 0) {
-          const selectedOption = productSelect.options[productSelect.selectedIndex];
-          const price = parseFloat(selectedOption.dataset.price);
-          const quantity = parseInt(quantityInput.value || 1);
-
-          if (!isNaN(price) && !isNaN(quantity)) {
-            const amount = price * quantity;
-            amountInput.value = '₹' + amount.toFixed(2);
-            total += amount;
-            console.log(`Product change: Added ${amount.toFixed(2)} to total, now: ${total.toFixed(2)}`);
-          }
-        }
-      });
-
-      // Update total amount display
-      const totalAmountElement = document.getElementById('totalAmount');
-      if (totalAmountElement) {
-        totalAmountElement.textContent = '₹' + total.toFixed(2);
-        console.log(`Product change: Set total amount to: ₹${total.toFixed(2)}`);
-      }
-
-      // Update paid amount input
-      const paidAmountInput = document.getElementById('paidAmount');
-      if (paidAmountInput) {
-        paidAmountInput.setAttribute('max', total.toFixed(2));
-        paidAmountInput.value = total.toFixed(2);
-      }
-    }
-  });
-</script>
-
-<!-- EMERGENCY FIX: Direct script to update total amount -->
-<script>
-  // EMERGENCY FIX: Add direct script to update total amount
-  (function() {
-    // Add direct event listener to product selects
-    document.addEventListener('click', function(event) {
-      // Check if we clicked on or near a product select
-      if (event.target && (event.target.classList.contains('product-select') ||
-          event.target.closest('.product-row'))) {
-        console.log('EMERGENCY: Clicked near product, forcing update');
-        setTimeout(emergencyUpdateTotal, 50);
-      }
-    });
-
-    // Add direct event listener for changes
-    document.addEventListener('change', function(event) {
-      if (event.target && (event.target.classList.contains('product-select') ||
-          event.target.classList.contains('quantity-input'))) {
-        console.log('EMERGENCY: Product or quantity changed, forcing update');
-        setTimeout(emergencyUpdateTotal, 50);
-      }
-    });
-    console.log('EMERGENCY FIX: Running immediate total update');
-
-    function emergencyUpdateTotal() {
-      const rows = document.querySelectorAll('.product-row');
-      let total = 0;
-
-      rows.forEach(row => {
-        const select = row.querySelector('.product-select');
-        const quantity = row.querySelector('.quantity-input');
-
-        if (select && select.selectedIndex > 0) {
-          const option = select.options[select.selectedIndex];
-          const price = parseFloat(option.dataset.price || option.getAttribute('data-price'));
-          const qty = parseInt(quantity.value || 1);
-
-          if (!isNaN(price) && !isNaN(qty)) {
-            total += price * qty;
-          }
-        }
-      });
-
-      const totalElement = document.getElementById('totalAmount');
-      if (totalElement) {
-        totalElement.textContent = '₹' + total.toFixed(2);
-        console.log('EMERGENCY FIX: Total set to ' + total.toFixed(2));
-      }
-
-      const paidInput = document.getElementById('paidAmount');
-      if (paidInput) {
-        paidInput.setAttribute('max', total.toFixed(2));
-        paidInput.value = total.toFixed(2);
-      }
-    }
-
-    // Run multiple times to ensure it catches
-    setTimeout(emergencyUpdateTotal, 100);
-    setTimeout(emergencyUpdateTotal, 500);
-    setTimeout(emergencyUpdateTotal, 1000);
-    setTimeout(emergencyUpdateTotal, 2000);
-  })();
-</script>
+<!-- All remaining conflicting JavaScript code removed -->
