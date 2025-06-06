@@ -108,6 +108,12 @@
                             <td>₹<%= bill.gstAmount.toFixed(2) %></td>
                           </tr>
                           <% } %>
+                          <% if (bill.discountAmount && bill.discountAmount > 0) { %>
+                          <tr>
+                            <td colspan="4" class="text-end text-success">Discount:</td>
+                            <td class="text-success">-₹<%= bill.discountAmount.toFixed(2) %></td>
+                          </tr>
+                          <% } %>
                           <tr>
                             <th colspan="4" class="text-end">Total Amount:</th>
                             <th>₹<%= bill.totalAmount.toFixed(2) %></th>
@@ -185,6 +191,17 @@
                   <input type="hidden" id="paymentType" name="paymentType" value="Cash">
 
                   <div class="col-md-6 mb-3">
+                    <label for="discountAmount" class="form-label">Discount Amount (₹) <span class="text-muted">(Optional)</span></label>
+                    <input type="number" class="form-control" id="discountAmount" name="discountAmount" step="0.01" min="0" value="<%= bill.discountAmount || 0 %>" placeholder="0.00" oninput="updateDiscountAmount()">
+                    <small class="form-text text-muted">Enter discount amount to be deducted from total (optional)</small>
+                    <div class="mt-2">
+                      <small class="text-info">
+                        <strong>Current Total: <span id="currentTotalDisplay">₹<%= bill.totalAmount.toFixed(2) %></span></strong>
+                      </small>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6 mb-3">
                     <label for="paidAmount" class="form-label">Paid Amount (₹)</label>
                     <input type="number" class="form-control" id="paidAmount" name="paidAmount" step="0.01" min="0" max="<%= bill.totalAmount %>" value="<%= bill.paidAmount %>" required oninput="validatePaidAmount(this)">
                     <div class="invalid-feedback" id="paidAmountFeedback">Paid amount cannot exceed the total amount of ₹<%= bill.totalAmount.toFixed(2) %>.</div>
@@ -217,9 +234,67 @@
 </div>
 
 <script>
+  // Global variable to track current total amount
+  let currentTotalAmount = parseFloat('<%= bill.totalAmount %>');
+
+  // Calculate original subtotal from server data
+  const originalSubtotal = parseFloat('<%= bill.subTotal || bill.items.reduce((sum, item) => sum + (item.price * item.quantity), 0) %>');
+  const originalGstAmount = parseFloat('<%= bill.gstAmount || 0 %>');
+
+  // Function to calculate current total amount including discount
+  function calculateCurrentTotal() {
+    const discountAmount = parseFloat(document.getElementById('discountAmount').value) || 0;
+
+    const total = Math.max(0, originalSubtotal + originalGstAmount - discountAmount);
+    currentTotalAmount = total;
+
+    // Update the current total display
+    const totalDisplay = document.getElementById('currentTotalDisplay');
+    if (totalDisplay) {
+      totalDisplay.textContent = `₹${total.toFixed(2)}`;
+    }
+
+    return total;
+  }
+
+  // Function to update discount amount and recalculate total
+  function updateDiscountAmount() {
+    const discountInput = document.getElementById('discountAmount');
+    const paidAmountInput = document.getElementById('paidAmount');
+
+    if (!discountInput || !paidAmountInput) return;
+
+    const discountValue = parseFloat(discountInput.value) || 0;
+    const maxDiscount = originalSubtotal + originalGstAmount;
+
+    // Validate discount doesn't exceed subtotal + GST
+    if (discountValue > maxDiscount) {
+      alert(`Discount amount cannot exceed the subtotal + GST amount (₹${maxDiscount.toFixed(2)})`);
+      discountInput.value = maxDiscount.toFixed(2);
+    }
+
+    // Recalculate total
+    const newTotal = calculateCurrentTotal();
+
+    // Update paid amount field max value
+    paidAmountInput.max = newTotal.toFixed(2);
+
+    // If current paid amount exceeds new total, adjust it
+    const currentPaidAmount = parseFloat(paidAmountInput.value) || 0;
+    if (currentPaidAmount > newTotal) {
+      paidAmountInput.value = newTotal.toFixed(2);
+    }
+
+    // Update validation message
+    const feedbackElement = document.getElementById('paidAmountFeedback');
+    if (feedbackElement) {
+      feedbackElement.textContent = `Paid amount cannot exceed the total amount of ₹${newTotal.toFixed(2)}.`;
+    }
+  }
+
   // Function to validate paid amount doesn't exceed total
   function validatePaidAmount(input) {
-    const totalAmount = parseFloat('<%= bill.totalAmount %>'); // Parse as string first to avoid JS/EJS confusion
+    const totalAmount = calculateCurrentTotal(); // Use dynamic total
     const paidValue = parseFloat(input.value);
 
     console.log('Validating paid amount:', paidValue, 'against total:', totalAmount);
@@ -289,9 +364,12 @@
     const totalWithGstContainer = document.getElementById('totalWithGstContainer');
     const gstTypeSelect = document.getElementById('gstType');
 
+    // Initialize discount calculation on page load
+    updateDiscountAmount();
+
     // Set the paid amount to the total amount if it's not already set
     if (!paidAmountInput.value) {
-      const totalAmount = parseFloat('<%= bill.totalAmount %>'); // Parse as string first to avoid JS/EJS confusion
+      const totalAmount = calculateCurrentTotal(); // Use dynamic total
       paidAmountInput.value = totalAmount.toFixed(2);
     }
 

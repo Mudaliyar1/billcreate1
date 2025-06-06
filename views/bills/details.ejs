@@ -114,6 +114,12 @@
                           <td class="text-end">₹<%= bill.gstAmount.toFixed(2) %></td>
                         </tr>
                         <% } %>
+                        <% if (bill.discountAmount && bill.discountAmount > 0) { %>
+                        <tr>
+                          <td colspan="4" class="text-end text-success">Discount:</td>
+                          <td class="text-end text-success">-₹<%= bill.discountAmount.toFixed(2) %></td>
+                        </tr>
+                        <% } %>
                         <tr>
                           <td colspan="4" class="text-end"><strong>Total Amount:</strong></td>
                           <td class="text-end"><strong>₹<%= bill.totalAmount.toFixed(2) %></strong></td>

@@ -266,25 +266,81 @@ const generateBillPDF = (bill, filePath) => {
         doc.text(`GST (${bill.gstPercentage}%)`, 380, gstY)
            .text(`₹${bill.gstAmount.toFixed(2)}`, 480, gstY);
 
-        // Show total with GST
-        const finalTotalY = gstY + 20;
+        // Show discount if present
+        let discountY = gstY;
+        if (bill.discountAmount && bill.discountAmount > 0) {
+          discountY = gstY + 20;
+          doc.fillColor('#28a745') // Green color for discount
+             .text('Discount:', 380, discountY)
+             .text(`-₹${bill.discountAmount.toFixed(2)}`, 480, discountY)
+             .fillColor(darkText); // Reset to default color
+        }
+
+        // Show total with GST and discount
+        const finalTotalY = discountY + 20;
         doc.moveTo(380, finalTotalY).lineTo(doc.page.width - 40, finalTotalY).stroke();
+
+        // Calculate final total amount (subtotal + GST - discount)
+        const finalTotalAmount = bill.subTotal + bill.gstAmount - (bill.discountAmount || 0);
 
         doc.fontSize(12)
            .font('Helvetica-Bold')
            .text('TOTAL AMOUNT:', 380, finalTotalY + 10)
-           .text(`₹${bill.totalAmount.toFixed(2)}`, 480, finalTotalY + 10);
+           .text(`₹${finalTotalAmount.toFixed(2)}`, 480, finalTotalY + 10);
       } else {
-        // No GST, just show total
+        // No GST, show subtotal and discount if present
+        let currentTotalY = totalY + 10;
+
+        // Show subtotal
+        doc.fontSize(11)
+           .font('Helvetica')
+           .text('SUBTOTAL:', 380, currentTotalY)
+           .text(`₹${bill.subTotal || bill.totalAmount + (bill.discountAmount || 0)}`, 480, currentTotalY);
+
+        // Show discount if present
+        if (bill.discountAmount && bill.discountAmount > 0) {
+          currentTotalY += 20;
+          doc.fillColor('#28a745') // Green color for discount
+             .text('Discount:', 380, currentTotalY)
+             .text(`-₹${bill.discountAmount.toFixed(2)}`, 480, currentTotalY)
+             .fillColor(darkText); // Reset to default color
+        }
+
+        // Show final total
+        currentTotalY += 20;
+        doc.moveTo(380, currentTotalY).lineTo(doc.page.width - 40, currentTotalY).stroke();
+
+        // Calculate final total amount (subtotal - discount, no GST)
+        const subtotalAmount = bill.subTotal || (bill.totalAmount + (bill.discountAmount || 0));
+        const finalTotalAmount = subtotalAmount - (bill.discountAmount || 0);
+
         doc.fontSize(12)
            .font('Helvetica-Bold')
-           .text('TOTAL AMOUNT:', 380, totalY + 10)
-           .text(`₹${bill.totalAmount.toFixed(2)}`, 480, totalY + 10);
+           .text('TOTAL AMOUNT:', 380, currentTotalY + 10)
+           .text(`₹${finalTotalAmount.toFixed(2)}`, 480, currentTotalY + 10);
       }
 
       // Payment information section
-      const paymentY = bill.gstEnabled ? totalY + 80 : totalY + 40;
+      // Calculate payment section position based on whether GST and discount are present
+      let paymentY;
+      if (bill.gstEnabled) {
+        paymentY = bill.discountAmount && bill.discountAmount > 0 ? totalY + 100 : totalY + 80;
+      } else {
+        paymentY = bill.discountAmount && bill.discountAmount > 0 ? totalY + 80 : totalY + 60;
+      }
       doc.moveTo(40, paymentY).lineTo(doc.page.width - 40, paymentY).stroke();
+
+      // Calculate the correct final total amount for payment calculations
+      let correctFinalTotal;
+      if (bill.gstEnabled) {
+        correctFinalTotal = bill.subTotal + bill.gstAmount - (bill.discountAmount || 0);
+      } else {
+        const subtotalAmount = bill.subTotal || (bill.totalAmount + (bill.discountAmount || 0));
+        correctFinalTotal = subtotalAmount - (bill.discountAmount || 0);
+      }
+
+      // Calculate correct remaining amount
+      const correctRemainingAmount = Math.max(0, correctFinalTotal - bill.paidAmount);
 
       doc.fontSize(11)
          .text('PAYMENT DETAILS', 40, paymentY + 10)
@@ -304,7 +360,7 @@ const generateBillPDF = (bill, filePath) => {
            .font('Helvetica-Bold')
            .text('Balance Due:', doc.page.width - 280, paymentY + 55)
            .font('Helvetica')
-           .text(`₹${bill.remainingAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 55);
+           .text(`₹${correctRemainingAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 55);
 
 
       } else if (bill.paymentType === 'Cash') {
@@ -314,11 +370,11 @@ const generateBillPDF = (bill, filePath) => {
            .font('Helvetica')
            .text(`₹${bill.paidAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 35);
 
-        if (bill.paidAmount < bill.totalAmount) {
+        if (bill.paidAmount < correctFinalTotal) {
           doc.font('Helvetica-Bold')
              .text('Balance Due:', doc.page.width - 280, paymentY + 55)
              .font('Helvetica')
-             .text(`₹${bill.remainingAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 55);
+             .text(`₹${correctRemainingAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 55);
         }
       }
 

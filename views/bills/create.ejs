@@ -642,6 +642,14 @@
                   </div>
 
                   <input type="hidden" id="paymentType" name="paymentType" value="Cash">
+
+                  <div class="col-md-6 mb-3">
+                    <label for="discountAmount" class="form-label">Discount Amount (₹) <span class="text-muted">(Optional)</span></label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="discountAmount" name="discountAmount"
+                      placeholder="0.00" oninput="updateDiscountAmount()">
+                    <small class="form-text text-muted">Enter discount amount to be deducted from total (optional)</small>
+                  </div>
+
                   <div class="col-md-6 mb-3">
                     <label for="paidAmount" class="form-label">Paid Amount (₹)</label>
                     <!-- Visible input for user interaction that will be submitted -->
@@ -678,6 +686,14 @@
                           </div>
                           <div class="col-md-6 text-end">
                             <h5 class="mb-0" id="gstDisplayAmount">₹0.00</h5>
+                          </div>
+                        </div>
+                        <div class="row align-items-center mt-2" id="discountRow" style="display: none;">
+                          <div class="col-md-6">
+                            <h5 class="mb-0 text-success">Discount:</h5>
+                          </div>
+                          <div class="col-md-6 text-end">
+                            <h5 class="mb-0 text-success" id="discountDisplayAmount">-₹0.00</h5>
                           </div>
                         </div>
                         <hr class="my-2">
@@ -747,6 +763,66 @@
 
     // Update remaining amount
     updateRemainingAmount();
+  }
+
+  // Function to update discount amount display and recalculate total
+  function updateDiscountAmount() {
+    const discountInput = document.getElementById('discountAmount');
+    const discountRow = document.getElementById('discountRow');
+    const discountDisplayAmount = document.getElementById('discountDisplayAmount');
+
+    if (!discountInput || !discountRow || !discountDisplayAmount) return;
+
+    const discountValue = parseFloat(discountInput.value) || 0;
+
+    // Show/hide discount row based on whether there's a discount
+    if (discountValue > 0) {
+      discountRow.style.display = 'flex';
+      discountDisplayAmount.textContent = '-₹' + discountValue.toFixed(2);
+    } else {
+      discountRow.style.display = 'none';
+      discountDisplayAmount.textContent = '-₹0.00';
+    }
+
+    // Validate discount doesn't exceed subtotal + GST
+    const subtotalElement = document.getElementById('subtotalAmount');
+    const gstAmountInput = document.getElementById('gstAmount');
+
+    if (subtotalElement) {
+      const subtotalValue = parseFloat(subtotalElement.textContent.replace('₹', '')) || 0;
+      const gstValue = parseFloat(gstAmountInput ? gstAmountInput.value : 0) || 0;
+      const maxDiscount = subtotalValue + gstValue;
+
+      if (discountValue > maxDiscount) {
+        alert(`Discount amount cannot exceed the subtotal + GST amount (₹${maxDiscount.toFixed(2)})`);
+        discountInput.value = maxDiscount.toFixed(2);
+        discountDisplayAmount.textContent = '-₹' + maxDiscount.toFixed(2);
+      }
+    }
+
+    // Recalculate total amount
+    updateTotalAmountWithDiscount();
+  }
+
+  // Function to update total amount including discount
+  function updateTotalAmountWithDiscount() {
+    const subtotalElement = document.getElementById('subtotalAmount');
+    const gstAmountInput = document.getElementById('gstAmount');
+    const discountInput = document.getElementById('discountAmount');
+    const totalAmountElement = document.getElementById('totalAmount');
+
+    if (!subtotalElement || !totalAmountElement) return;
+
+    const subtotalValue = parseFloat(subtotalElement.textContent.replace('₹', '')) || 0;
+    const gstValue = parseFloat(gstAmountInput ? gstAmountInput.value : 0) || 0;
+    const discountValue = parseFloat(discountInput ? discountInput.value : 0) || 0;
+
+    const finalTotal = Math.max(0, subtotalValue + gstValue - discountValue);
+
+    totalAmountElement.textContent = '₹' + finalTotal.toFixed(2);
+
+    // Update paid amount input using centralized function
+    updatePaidAmount();
   }
 
   // Function to update remaining amount display
@@ -990,26 +1066,19 @@
       // Calculate GST amount
       calculateGstAmount();
     } else {
-      // No GST, total is the same as subtotal
-      const totalAmountElement = document.getElementById('totalAmount');
-      if (totalAmountElement) {
-        totalAmountElement.textContent = '₹' + total.toFixed(2);
-        console.log(`Updated total amount display to: ${total.toFixed(2)}`);
+      // No GST, apply discount to subtotal
+      updateTotalAmountWithDiscount();
 
-        // Update the paid amount input using the centralized function
-        updatePaidAmount();
-
-        // Add hidden input for subtotal
-        let subtotalInput = document.getElementById('subtotalInput');
-        if (!subtotalInput) {
-          subtotalInput = document.createElement('input');
-          subtotalInput.type = 'hidden';
-          subtotalInput.id = 'subtotalInput';
-          subtotalInput.name = 'subTotal';
-          document.getElementById('billForm').appendChild(subtotalInput);
-        }
-        subtotalInput.value = total.toFixed(2);
+      // Add hidden input for subtotal
+      let subtotalInput = document.getElementById('subtotalInput');
+      if (!subtotalInput) {
+        subtotalInput = document.createElement('input');
+        subtotalInput.type = 'hidden';
+        subtotalInput.id = 'subtotalInput';
+        subtotalInput.name = 'subTotal';
+        document.getElementById('billForm').appendChild(subtotalInput);
       }
+      subtotalInput.value = total.toFixed(2);
     }
   }
 
@@ -1216,18 +1285,14 @@
     if (!totalAmountElement || !gstAmountInput) return;
 
     const gstAmount = parseFloat(gstAmountInput.value) || 0;
-    const total = subtotal + gstAmount;
 
     console.log('Updating total with GST:', {
       subtotal: subtotal,
-      gstAmount: gstAmount,
-      total: total
+      gstAmount: gstAmount
     });
 
-    totalAmountElement.textContent = '₹' + total.toFixed(2);
-
-    // Update paid amount input using centralized function
-    updatePaidAmount();
+    // Use the discount-aware function to calculate final total
+    updateTotalAmountWithDiscount();
 
     // Add hidden input for subtotal
     let subtotalInput = document.getElementById('subtotalInput');
@@ -1240,7 +1305,7 @@
     }
     subtotalInput.value = subtotal.toFixed(2);
 
-    // Add hidden input for total amount with GST
+    // Add hidden input for total amount with GST (before discount)
     let totalWithGstInput = document.getElementById('totalWithGstInput');
     if (!totalWithGstInput) {
       totalWithGstInput = document.createElement('input');
@@ -1249,7 +1314,7 @@
       totalWithGstInput.name = 'totalWithGst';
       document.getElementById('billForm').appendChild(totalWithGstInput);
     }
-    totalWithGstInput.value = total.toFixed(2);
+    totalWithGstInput.value = (subtotal + gstAmount).toFixed(2);
   }
 
   document.addEventListener('DOMContentLoaded', function() {

@@ -53,6 +53,7 @@ exports.postCreateBill = async (req, res) => {
     const creditType = req.body.creditType;
     const paidAmount = req.body.paidAmount;
     const customPaidAmount = req.body.customPaidAmount;
+    const discountAmount = req.body.discountAmount;
     const billDate = req.body.billDate;
 
     // GST related fields
@@ -388,9 +389,27 @@ exports.postCreateBill = async (req, res) => {
         finalTotalAmount = totalAmount;
       }
 
+      // Apply discount to final total
+      const parsedDiscountAmount = parseFloat(discountAmount) || 0;
+      if (parsedDiscountAmount > 0) {
+        // Validate discount doesn't exceed total
+        if (parsedDiscountAmount > finalTotalAmount) {
+          req.flash('error', `Discount amount (₹${parsedDiscountAmount}) cannot exceed the total amount (₹${finalTotalAmount.toFixed(2)})`);
+          return res.redirect('/bills/create');
+        }
+
+        finalTotalAmount = Math.max(0, finalTotalAmount - parsedDiscountAmount);
+
+        console.log('Applied discount:', {
+          discountAmount: parsedDiscountAmount,
+          finalTotalAfterDiscount: finalTotalAmount
+        });
+      }
+
       console.log('Adjusted final calculation:', {
         adjustedSubTotal: totalAmount,
         adjustedGstAmount: calculatedGstAmount,
+        adjustedDiscountAmount: parsedDiscountAmount,
         adjustedFinalTotal: finalTotalAmount
       });
     }
@@ -408,6 +427,7 @@ exports.postCreateBill = async (req, res) => {
       items,
       subTotal: totalAmount,
       gstEnabled,
+      discountAmount: parseFloat(discountAmount) || 0,
       totalAmount: finalTotalAmount,
       paymentType,
       billDate: billDate ? new Date(billDate) : new Date()
@@ -833,9 +853,10 @@ exports.updateBill = async (req, res) => {
       return res.redirect('/bills');
     }
 
-    // Store the original paid amount for comparison later
+    // Store the original paid amount and total amount for comparison later
     const originalPaidAmount = bill.paidAmount;
     const originalRemainingAmount = bill.remainingAmount;
+    const originalTotalAmount = bill.totalAmount;
 
     // Extract form data
     const {
@@ -848,6 +869,7 @@ exports.updateBill = async (req, res) => {
       creditType,
       paidAmount,
       customPaidAmount,
+      discountAmount,
       gstEnabled,
       gstType,
       gstPercentage,
@@ -934,6 +956,21 @@ exports.updateBill = async (req, res) => {
       }
     }
 
+    // Handle discount amount
+    const parsedDiscountAmount = parseFloat(discountAmount) || 0;
+    bill.discountAmount = parsedDiscountAmount;
+
+    if (parsedDiscountAmount > 0) {
+      // Validate discount doesn't exceed total
+      if (parsedDiscountAmount > bill.totalAmount) {
+        req.flash('error', `Discount amount (₹${parsedDiscountAmount}) cannot exceed the total amount (₹${bill.totalAmount.toFixed(2)})`);
+        return res.redirect(`/bills/${req.params.id}/edit`);
+      }
+
+      // Apply discount to total amount
+      bill.totalAmount = Math.max(0, bill.totalAmount - parsedDiscountAmount);
+    }
+
     // Handle payment (only Cash is supported)
     let newPaidAmount = bill.totalAmount; // Default to full payment
     let newRemainingAmount = 0;
@@ -948,14 +985,21 @@ exports.updateBill = async (req, res) => {
         return res.redirect(`/bills/${req.params.id}/edit`);
       }
 
-      // Ensure paid amount doesn't exceed total (with generous tolerance for floating-point precision)
-      if (!isAmountValid(parsedAmount, bill.totalAmount)) {
-        req.flash('error', 'Paid amount cannot exceed the total amount');
-        return res.redirect(`/bills/${req.params.id}/edit`);
-      }
+      // If paid amount exceeds new total (after discount), auto-adjust to full payment
+      if (parsedAmount > bill.totalAmount) {
+        console.log(`Auto-adjusting paid amount from ${parsedAmount} to ${bill.totalAmount} due to discount`);
+        newPaidAmount = bill.totalAmount;
+        newRemainingAmount = 0;
+      } else {
+        // Ensure paid amount doesn't exceed total (with generous tolerance for floating-point precision)
+        if (!isAmountValid(parsedAmount, bill.totalAmount)) {
+          req.flash('error', 'Paid amount cannot exceed the total amount');
+          return res.redirect(`/bills/${req.params.id}/edit`);
+        }
 
-      newPaidAmount = parsedAmount;
-      newRemainingAmount = bill.totalAmount - parsedAmount;
+        newPaidAmount = parsedAmount;
+        newRemainingAmount = bill.totalAmount - parsedAmount;
+      }
     }
 
     // Check if payment status has changed
@@ -966,12 +1010,23 @@ exports.updateBill = async (req, res) => {
     bill.remainingAmount = newRemainingAmount;
 
     // Log the payment data for debugging
-    console.log('Payment data (update):', {
+    console.log('=== PAYMENT CALCULATION DEBUG ===');
+    console.log('Original values:', {
       originalPaidAmount,
       originalRemainingAmount,
+      originalTotalAmount
+    });
+    console.log('New values:', {
       newPaidAmount,
       newRemainingAmount,
-      paymentStatusChanged
+      newTotalAmount: bill.totalAmount,
+      discountAmount: bill.discountAmount
+    });
+    console.log('Payment status changed:', paymentStatusChanged);
+    console.log('Calculation check:', {
+      expectedRemaining: bill.totalAmount - newPaidAmount,
+      actualRemaining: newRemainingAmount,
+      isCorrect: (bill.totalAmount - newPaidAmount) === newRemainingAmount
     });
 
     // Clear any credit-related fields
@@ -979,7 +1034,25 @@ exports.updateBill = async (req, res) => {
     bill.customPaidAmount = undefined;
 
     // Save the updated bill
+    console.log('=== BEFORE SAVING BILL ===');
+    console.log('Bill data to save:', {
+      id: bill._id,
+      totalAmount: bill.totalAmount,
+      discountAmount: bill.discountAmount,
+      paidAmount: bill.paidAmount,
+      remainingAmount: bill.remainingAmount
+    });
+
     await bill.save();
+
+    console.log('=== AFTER SAVING BILL ===');
+    console.log('Saved bill data:', {
+      id: bill._id,
+      totalAmount: bill.totalAmount,
+      discountAmount: bill.discountAmount,
+      paidAmount: bill.paidAmount,
+      remainingAmount: bill.remainingAmount
+    });
 
     // If payment status changed, update inventory records
     if (paymentStatusChanged) {
@@ -994,9 +1067,10 @@ exports.updateBill = async (req, res) => {
           const itemTotal = item.price * item.quantity;
 
           // Calculate the change in paid and credit amounts
-          if (originalPaidAmount < bill.totalAmount && newPaidAmount >= bill.totalAmount) {
+          // Use originalTotalAmount for comparison to handle discount scenarios correctly
+          if (originalPaidAmount < originalTotalAmount && newPaidAmount >= bill.totalAmount) {
             // Changed from partially paid to fully paid
-            const originalPaidRatio = originalPaidAmount / bill.totalAmount;
+            const originalPaidRatio = originalPaidAmount / originalTotalAmount;
             const originalCreditAmount = itemTotal * (1 - originalPaidRatio);
 
             // Move amount from credit to paid
@@ -1005,7 +1079,7 @@ exports.updateBill = async (req, res) => {
 
             console.log(`Product ${product.name}: Moved ${originalCreditAmount.toFixed(2)} from credit to paid`);
           }
-          else if (originalPaidAmount >= bill.totalAmount && newPaidAmount < bill.totalAmount) {
+          else if (originalPaidAmount >= originalTotalAmount && newPaidAmount < bill.totalAmount) {
             // Changed from fully paid to partially paid
             const newPaidRatio = newPaidAmount / bill.totalAmount;
             const newCreditAmount = itemTotal * (1 - newPaidRatio);
@@ -1016,9 +1090,9 @@ exports.updateBill = async (req, res) => {
 
             console.log(`Product ${product.name}: Moved ${newCreditAmount.toFixed(2)} from paid to credit`);
           }
-          else if (originalPaidAmount < bill.totalAmount && newPaidAmount < bill.totalAmount) {
+          else if (originalPaidAmount < originalTotalAmount && newPaidAmount < bill.totalAmount) {
             // Both partially paid, but amount changed
-            const originalPaidRatio = originalPaidAmount / bill.totalAmount;
+            const originalPaidRatio = originalPaidAmount / originalTotalAmount;
             const newPaidRatio = newPaidAmount / bill.totalAmount;
 
             const itemOriginalPaidAmount = itemTotal * originalPaidRatio;
