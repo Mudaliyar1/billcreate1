@@ -33,6 +33,16 @@
                     <h5>Customer Information</h5>
                   </div>
 
+                  <div class="col-md-12 mb-3">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="unknownCustomer" name="unknownCustomer" <%= bill.isUnknown ? 'checked' : '' %>>
+                      <label class="form-check-label" for="unknownCustomer">
+                        <strong>Edit as unknown customer</strong>
+                      </label>
+                    </div>
+                    <small class="form-text text-muted">Enable this to edit the bill as unknown customer. All fields will be automatically filled as "Unknown".</small>
+                  </div>
+
                   <div class="col-md-4 mb-3">
                     <label for="customerName" class="form-label">Customer Name</label>
                     <input type="text" class="form-control" id="customerName" name="customerName" value="<%= bill.customer.name %>" required>
@@ -363,6 +373,70 @@
     const gstAmountContainer = document.getElementById('gstAmountContainer');
     const totalWithGstContainer = document.getElementById('totalWithGstContainer');
     const gstTypeSelect = document.getElementById('gstType');
+
+    // Unknown customer toggle functionality
+    const unknownCustomerToggle = document.getElementById('unknownCustomer');
+    const customerNameInput = document.getElementById('customerName');
+    const customerPhoneInput = document.getElementById('customerPhone');
+    const customerPlaceInput = document.getElementById('customerPlace');
+    const customerEmailInput = document.getElementById('customerEmail');
+    const workInput = document.getElementById('work');
+    const pickedByInput = document.getElementById('pickedBy');
+
+    unknownCustomerToggle.addEventListener('change', function() {
+      if (this.checked) {
+        // Fill all fields with "Unknown" and disable them
+        customerNameInput.value = 'Unknown';
+        customerPhoneInput.value = 'Unknown';
+        customerPlaceInput.value = 'Unknown';
+        customerEmailInput.value = '';
+        workInput.value = 'Unknown';
+        pickedByInput.value = 'Unknown';
+
+        // Disable the fields
+        customerNameInput.disabled = true;
+        customerPhoneInput.disabled = true;
+        customerPlaceInput.disabled = true;
+        customerEmailInput.disabled = true;
+        workInput.disabled = true;
+        pickedByInput.disabled = true;
+
+        // Remove required attribute temporarily
+        customerNameInput.removeAttribute('required');
+        customerPhoneInput.removeAttribute('required');
+        customerPlaceInput.removeAttribute('required');
+        workInput.removeAttribute('required');
+        pickedByInput.removeAttribute('required');
+      } else {
+        // Restore original values and enable them
+        customerNameInput.value = '<%= bill.customer.name %>';
+        customerPhoneInput.value = '<%= bill.customer.phone %>';
+        customerPlaceInput.value = '<%= bill.customer.place %>';
+        customerEmailInput.value = '<%= bill.customer.email || "" %>';
+        workInput.value = '<%= bill.work %>';
+        pickedByInput.value = '<%= bill.pickedBy %>';
+
+        // Enable the fields
+        customerNameInput.disabled = false;
+        customerPhoneInput.disabled = false;
+        customerPlaceInput.disabled = false;
+        customerEmailInput.disabled = false;
+        workInput.disabled = false;
+        pickedByInput.disabled = false;
+
+        // Restore required attributes
+        customerNameInput.setAttribute('required', '');
+        customerPhoneInput.setAttribute('required', '');
+        customerPlaceInput.setAttribute('required', '');
+        workInput.setAttribute('required', '');
+        pickedByInput.setAttribute('required', '');
+      }
+    });
+
+    // Initialize the form based on current state
+    if (unknownCustomerToggle.checked) {
+      unknownCustomerToggle.dispatchEvent(new Event('change'));
+    }
 
     // Initialize discount calculation on page load
     updateDiscountAmount();

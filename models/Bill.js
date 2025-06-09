@@ -4,33 +4,59 @@ const BillSchema = new mongoose.Schema({
   customer: {
     name: {
       type: String,
-      required: true,
-      trim: true
+      required: function() {
+        return !this.isUnknown;
+      },
+      trim: true,
+      default: function() {
+        return this.isUnknown ? 'Unknown' : undefined;
+      }
     },
     phone: {
       type: String,
-      required: true,
-      trim: true
+      required: function() {
+        return !this.isUnknown;
+      },
+      trim: true,
+      default: function() {
+        return this.isUnknown ? 'Unknown' : undefined;
+      }
     },
     place: {
       type: String,
-      required: true,
-      trim: true
+      required: function() {
+        return !this.isUnknown;
+      },
+      trim: true,
+      default: function() {
+        return this.isUnknown ? 'Unknown' : undefined;
+      }
     },
     email: {
       type: String,
-      trim: true
+      trim: true,
+      default: ''
     }
   },
   work: {
     type: String,
-    required: true,
-    trim: true
+    required: function() {
+      return !this.isUnknown;
+    },
+    trim: true,
+    default: function() {
+      return this.isUnknown ? 'Unknown' : undefined;
+    }
   },
   pickedBy: {
     type: String,
-    required: true,
-    trim: true
+    required: function() {
+      return !this.isUnknown;
+    },
+    trim: true,
+    default: function() {
+      return this.isUnknown ? 'Unknown' : undefined;
+    }
   },
   items: [
     {
@@ -134,6 +160,10 @@ const BillSchema = new mongoose.Schema({
     type: String,
     unique: true,
     sparse: true // This allows the field to be undefined during document creation
+  },
+  isUnknown: {
+    type: Boolean,
+    default: false
   },
   billDate: {
     type: Date,

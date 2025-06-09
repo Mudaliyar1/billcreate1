@@ -32,6 +32,16 @@
                   </div>
 
                   <div class="col-md-12 mb-3">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="unknownCustomer" name="unknownCustomer">
+                      <label class="form-check-label" for="unknownCustomer">
+                        <strong>Create bill for unknown customer</strong>
+                      </label>
+                    </div>
+                    <small class="form-text text-muted">Enable this to create a bill without customer details. All fields will be automatically filled as "Unknown".</small>
+                  </div>
+
+                  <div class="col-md-12 mb-3">
                     <label for="customerSearch" class="form-label">Search Customer</label>
                     <div class="input-group mb-3">
                       <input type="text" class="form-control" id="customerSearch" placeholder="Search by name or phone...">
@@ -115,6 +125,76 @@
                         searchInput.addEventListener('input', function() {
                           clearTimeout(searchTimeout);
                           searchTimeout = setTimeout(searchCustomers, 300);
+                        });
+
+                        // Unknown customer toggle functionality
+                        const unknownCustomerToggle = document.getElementById('unknownCustomer');
+                        const customerSearchDiv = document.querySelector('.col-md-12 mb-3:has(#customerSearch)');
+                        const customerNameInput = document.getElementById('customerName');
+                        const customerPhoneInput = document.getElementById('customerPhone');
+                        const customerPlaceInput = document.getElementById('customerPlace');
+                        const customerEmailInput = document.getElementById('customerEmail');
+                        const workInput = document.getElementById('work');
+                        const pickedByInput = document.getElementById('pickedBy');
+
+                        unknownCustomerToggle.addEventListener('change', function() {
+                          if (this.checked) {
+                            // Hide customer search
+                            if (customerSearchDiv) {
+                              customerSearchDiv.style.display = 'none';
+                            }
+
+                            // Fill all fields with "Unknown" and disable them
+                            customerNameInput.value = 'Unknown';
+                            customerPhoneInput.value = 'Unknown';
+                            customerPlaceInput.value = 'Unknown';
+                            customerEmailInput.value = '';
+                            workInput.value = 'Unknown';
+                            pickedByInput.value = 'Unknown';
+
+                            // Disable the fields
+                            customerNameInput.disabled = true;
+                            customerPhoneInput.disabled = true;
+                            customerPlaceInput.disabled = true;
+                            customerEmailInput.disabled = true;
+                            workInput.disabled = true;
+                            pickedByInput.disabled = true;
+
+                            // Remove required attribute temporarily
+                            customerNameInput.removeAttribute('required');
+                            customerPhoneInput.removeAttribute('required');
+                            customerPlaceInput.removeAttribute('required');
+                            workInput.removeAttribute('required');
+                            pickedByInput.removeAttribute('required');
+                          } else {
+                            // Show customer search
+                            if (customerSearchDiv) {
+                              customerSearchDiv.style.display = 'block';
+                            }
+
+                            // Clear all fields and enable them
+                            customerNameInput.value = '';
+                            customerPhoneInput.value = '';
+                            customerPlaceInput.value = '';
+                            customerEmailInput.value = '';
+                            workInput.value = '';
+                            pickedByInput.value = '';
+
+                            // Enable the fields
+                            customerNameInput.disabled = false;
+                            customerPhoneInput.disabled = false;
+                            customerPlaceInput.disabled = false;
+                            customerEmailInput.disabled = false;
+                            workInput.disabled = false;
+                            pickedByInput.disabled = false;
+
+                            // Restore required attributes
+                            customerNameInput.setAttribute('required', '');
+                            customerPhoneInput.setAttribute('required', '');
+                            customerPlaceInput.setAttribute('required', '');
+                            workInput.setAttribute('required', '');
+                            pickedByInput.setAttribute('required', '');
+                          }
                         });
                       });
                     </script>
@@ -1084,43 +1164,50 @@
 
   // Function to validate the bill form before submission
   function validateBillForm() {
-    // Check customer information
-    const customerName = document.getElementById('customerName').value.trim();
-    const customerPhone = document.getElementById('customerPhone').value.trim();
-    const customerPlace = document.getElementById('customerPlace').value.trim();
+    // Check if unknown customer mode is enabled
+    const unknownCustomerToggle = document.getElementById('unknownCustomer');
+    const isUnknownCustomer = unknownCustomerToggle && unknownCustomerToggle.checked;
 
-    if (!customerName) {
-      alert('Please enter customer name');
-      document.getElementById('customerName').focus();
-      return false;
-    }
+    // Only validate customer information if not in unknown customer mode
+    if (!isUnknownCustomer) {
+      // Check customer information
+      const customerName = document.getElementById('customerName').value.trim();
+      const customerPhone = document.getElementById('customerPhone').value.trim();
+      const customerPlace = document.getElementById('customerPlace').value.trim();
 
-    if (!customerPhone) {
-      alert('Please enter customer phone number');
-      document.getElementById('customerPhone').focus();
-      return false;
-    }
+      if (!customerName) {
+        alert('Please enter customer name');
+        document.getElementById('customerName').focus();
+        return false;
+      }
 
-    if (!customerPlace) {
-      alert('Please enter customer place');
-      document.getElementById('customerPlace').focus();
-      return false;
-    }
+      if (!customerPhone) {
+        alert('Please enter customer phone number');
+        document.getElementById('customerPhone').focus();
+        return false;
+      }
 
-    // Check work and picked by
-    const work = document.getElementById('work').value.trim();
-    const pickedBy = document.getElementById('pickedBy').value.trim();
+      if (!customerPlace) {
+        alert('Please enter customer place');
+        document.getElementById('customerPlace').focus();
+        return false;
+      }
 
-    if (!work) {
-      alert('Please enter work details');
-      document.getElementById('work').focus();
-      return false;
-    }
+      // Check work and picked by
+      const work = document.getElementById('work').value.trim();
+      const pickedBy = document.getElementById('pickedBy').value.trim();
 
-    if (!pickedBy) {
-      alert('Please enter who picked the order');
-      document.getElementById('pickedBy').focus();
-      return false;
+      if (!work) {
+        alert('Please enter work details');
+        document.getElementById('work').focus();
+        return false;
+      }
+
+      if (!pickedBy) {
+        alert('Please enter who picked the order');
+        document.getElementById('pickedBy').focus();
+        return false;
+      }
     }
 
     // Check if at least one product is selected
@@ -2446,44 +2533,49 @@
           formPaidAmountInput.value = total.toFixed(2);
         }
       }
-      // Check required customer fields
-      if (!customerNameInput.value.trim()) {
-        e.preventDefault();
-        alert('Please enter customer name');
-        customerNameInput.focus();
-        return false;
-      }
+      // Check required customer fields only if not in unknown customer mode
+      const unknownCustomerToggle = document.getElementById('unknownCustomer');
+      const isUnknownCustomer = unknownCustomerToggle && unknownCustomerToggle.checked;
 
-      if (!customerPhoneInput.value.trim()) {
-        e.preventDefault();
-        alert('Please enter customer phone number');
-        customerPhoneInput.focus();
-        return false;
-      }
+      if (!isUnknownCustomer) {
+        if (!customerNameInput.value.trim()) {
+          e.preventDefault();
+          alert('Please enter customer name');
+          customerNameInput.focus();
+          return false;
+        }
 
-      if (!customerPlaceInput.value.trim()) {
-        e.preventDefault();
-        alert('Please enter customer place');
-        customerPlaceInput.focus();
-        return false;
-      }
+        if (!customerPhoneInput.value.trim()) {
+          e.preventDefault();
+          alert('Please enter customer phone number');
+          customerPhoneInput.focus();
+          return false;
+        }
 
-      // Check work and picked by fields
-      const workInput = document.getElementById('work');
-      const pickedByInput = document.getElementById('pickedBy');
+        if (!customerPlaceInput.value.trim()) {
+          e.preventDefault();
+          alert('Please enter customer place');
+          customerPlaceInput.focus();
+          return false;
+        }
 
-      if (!workInput.value.trim()) {
-        e.preventDefault();
-        alert('Please enter work details');
-        workInput.focus();
-        return false;
-      }
+        // Check work and picked by fields
+        const workInput = document.getElementById('work');
+        const pickedByInput = document.getElementById('pickedBy');
 
-      if (!pickedByInput.value.trim()) {
-        e.preventDefault();
-        alert('Please enter who picked up the order');
-        pickedByInput.focus();
-        return false;
+        if (!workInput.value.trim()) {
+          e.preventDefault();
+          alert('Please enter work details');
+          workInput.focus();
+          return false;
+        }
+
+        if (!pickedByInput.value.trim()) {
+          e.preventDefault();
+          alert('Please enter who picked up the order');
+          pickedByInput.focus();
+          return false;
+        }
       }
 
       // IMPROVED FIX: More careful validation and disabling of empty product rows

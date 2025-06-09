@@ -49,6 +49,7 @@ exports.postCreateBill = async (req, res) => {
     const customerEmail = req.body.customerEmail;
     const work = req.body.work;
     const pickedBy = req.body.pickedBy;
+    const unknownCustomer = req.body.unknownCustomer === 'on';
     const paymentType = req.body.paymentType;
     const creditType = req.body.creditType;
     const paidAmount = req.body.paidAmount;
@@ -133,11 +134,15 @@ exports.postCreateBill = async (req, res) => {
     // Validate input with detailed error messages
     const missingFields = [];
 
-    if (!customerName) missingFields.push('Customer Name');
-    if (!customerPhone) missingFields.push('Phone Number');
-    if (!customerPlace) missingFields.push('Place');
-    if (!work) missingFields.push('Work');
-    if (!pickedBy) missingFields.push('Picked By');
+    // Only validate customer fields if not in unknown customer mode
+    if (!unknownCustomer) {
+      if (!customerName) missingFields.push('Customer Name');
+      if (!customerPhone) missingFields.push('Phone Number');
+      if (!customerPlace) missingFields.push('Place');
+      if (!work) missingFields.push('Work');
+      if (!pickedBy) missingFields.push('Picked By');
+    }
+
     if (!paymentType) missingFields.push('Payment Type');
 
     // Check if productIds and quantities exist in any form (array or single value)
@@ -312,25 +317,31 @@ exports.postCreateBill = async (req, res) => {
       return res.redirect('/bills/create');
     }
 
-    // Create or update customer
-    let customer = await Customer.findOne({ phone: customerPhone });
+    // Create or update customer (skip for unknown customers)
+    let customer;
 
-    if (!customer) {
-      customer = await Customer.create({
-        name: customerName,
-        phone: customerPhone,
-        place: customerPlace,
-        email: customerEmail
-      });
-    } else {
-      // Update customer details if they've changed
-      if (customer.name !== customerName || customer.place !== customerPlace || customer.email !== customerEmail) {
-        customer.name = customerName;
-        customer.place = customerPlace;
-        customer.email = customerEmail;
-        await customer.save();
+    if (!unknownCustomer) {
+      // Normal customer creation/update logic for known customers
+      customer = await Customer.findOne({ phone: customerPhone });
+
+      if (!customer) {
+        customer = await Customer.create({
+          name: customerName,
+          phone: customerPhone,
+          place: customerPlace,
+          email: customerEmail
+        });
+      } else {
+        // Update customer details if they've changed
+        if (customer.name !== customerName || customer.place !== customerPlace || customer.email !== customerEmail) {
+          customer.name = customerName;
+          customer.place = customerPlace;
+          customer.email = customerEmail;
+          await customer.save();
+        }
       }
     }
+    // For unknown customers, we don't create/update customer records
 
     // Calculate GST amount if enabled
     let calculatedGstAmount = 0;
@@ -416,14 +427,15 @@ exports.postCreateBill = async (req, res) => {
 
     // Prepare bill data
     const billData = {
+      isUnknown: unknownCustomer, // Set this first for conditional validation
       customer: {
-        name: customerName,
-        phone: customerPhone,
-        place: customerPlace,
-        email: customerEmail
+        name: unknownCustomer ? 'Unknown' : customerName,
+        phone: unknownCustomer ? 'Unknown' : customerPhone,
+        place: unknownCustomer ? 'Unknown' : customerPlace,
+        email: unknownCustomer ? '' : (customerEmail || '')
       },
-      work,
-      pickedBy,
+      work: unknownCustomer ? 'Unknown' : work,
+      pickedBy: unknownCustomer ? 'Unknown' : pickedBy,
       items,
       subTotal: totalAmount,
       gstEnabled,
@@ -657,6 +669,92 @@ exports.getBills = async (req, res) => {
   }
 };
 
+// Get unknown bills
+exports.getUnknownBills = async (req, res) => {
+  try {
+    // Get search parameters from query
+    const { billNumber, dateFrom, dateTo, paymentStatus, search } = req.query;
+
+    // Build search query
+    let searchQuery = { isUnknown: true };
+
+    // Search by bill number
+    if (billNumber && billNumber.trim()) {
+      searchQuery.billNumber = { $regex: billNumber.trim(), $options: 'i' };
+    }
+
+    // Search by date range
+    if (dateFrom || dateTo) {
+      searchQuery.billDate = {};
+      if (dateFrom) {
+        searchQuery.billDate.$gte = new Date(dateFrom);
+      }
+      if (dateTo) {
+        // Add one day to include the end date
+        const endDate = new Date(dateTo);
+        endDate.setDate(endDate.getDate() + 1);
+        searchQuery.billDate.$lt = endDate;
+      }
+    }
+
+    // Search by payment status
+    if (paymentStatus) {
+      if (paymentStatus === 'pending') {
+        searchQuery.remainingAmount = { $gt: 0 };
+      } else if (paymentStatus === 'paid') {
+        searchQuery.remainingAmount = { $lte: 0 };
+      }
+    }
+
+    // General search across bill number (if search parameter is provided)
+    if (search && search.trim()) {
+      searchQuery.$or = [
+        { billNumber: { $regex: search.trim(), $options: 'i' } }
+      ];
+    }
+
+    console.log('Unknown bills search query:', JSON.stringify(searchQuery, null, 2));
+
+    const unknownBills = await Bill.find(searchQuery).sort({ createdAt: -1 });
+
+    // Calculate statistics for all unknown bills (not just filtered)
+    const allUnknownBills = await Bill.find({ isUnknown: true });
+    const totalUnknownBills = allUnknownBills.length;
+    const totalAmount = allUnknownBills.reduce((sum, bill) => sum + bill.totalAmount, 0);
+    const totalPaid = allUnknownBills.reduce((sum, bill) => sum + bill.paidAmount, 0);
+    const totalRemaining = allUnknownBills.reduce((sum, bill) => sum + bill.remainingAmount, 0);
+
+    // Calculate filtered statistics
+    const filteredStats = {
+      totalBills: unknownBills.length,
+      totalAmount: unknownBills.reduce((sum, bill) => sum + bill.totalAmount, 0),
+      totalPaid: unknownBills.reduce((sum, bill) => sum + bill.paidAmount, 0),
+      totalRemaining: unknownBills.reduce((sum, bill) => sum + bill.remainingAmount, 0)
+    };
+
+    const stats = {
+      totalBills: totalUnknownBills,
+      totalAmount,
+      totalPaid,
+      totalRemaining
+    };
+
+    res.render('bills/unknown', {
+      title: 'Unknown Bills - Kushi Decorators',
+      bills: unknownBills,
+      stats,
+      filteredStats,
+      searchParams: { billNumber, dateFrom, dateTo, paymentStatus, search },
+      error: req.flash('error'),
+      success: req.flash('success')
+    });
+  } catch (error) {
+    console.error('Get unknown bills error:', error);
+    req.flash('error', 'Failed to fetch unknown bills');
+    res.redirect('/dashboard');
+  }
+};
+
 // Get bill details
 exports.getBillDetails = async (req, res) => {
   try {
@@ -863,6 +961,7 @@ exports.updateBill = async (req, res) => {
       customerName,
       customerPhone,
       customerPlace,
+      customerEmail,
       work,
       pickedBy,
       paymentType,
@@ -874,12 +973,22 @@ exports.updateBill = async (req, res) => {
       gstType,
       gstPercentage,
       gstAmount,
-      billDate
+      billDate,
+      unknownCustomer
     } = req.body;
 
-    // Validate input
-    if (!customerName || !customerPhone || !customerPlace || !work || !pickedBy || !paymentType) {
-      req.flash('error', 'All fields are required');
+    // Validate input (skip customer validation for unknown customers)
+    const isUnknownCustomer = unknownCustomer === 'on';
+
+    if (!isUnknownCustomer) {
+      if (!customerName || !customerPhone || !customerPlace || !work || !pickedBy) {
+        req.flash('error', 'All customer fields are required');
+        return res.redirect(`/bills/${req.params.id}/edit`);
+      }
+    }
+
+    if (!paymentType) {
+      req.flash('error', 'Payment type is required');
       return res.redirect(`/bills/${req.params.id}/edit`);
     }
 
@@ -899,9 +1008,11 @@ exports.updateBill = async (req, res) => {
     bill.customer.name = customerName;
     bill.customer.phone = customerPhone;
     bill.customer.place = customerPlace;
+    bill.customer.email = customerEmail || '';
     bill.work = work;
     bill.pickedBy = pickedBy;
     bill.paymentType = paymentType;
+    bill.isUnknown = unknownCustomer === 'on';
 
     // Update bill date if provided
     if (billDate) {

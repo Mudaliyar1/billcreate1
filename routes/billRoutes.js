@@ -7,6 +7,7 @@ const { isAuthenticated } = require('../middleware/auth');
 router.get('/bills/create', isAuthenticated, billController.getCreateBill);
 router.post('/bills/create', isAuthenticated, billController.postCreateBill);
 router.get('/bills', isAuthenticated, billController.getBills);
+router.get('/bills/unknown', isAuthenticated, billController.getUnknownBills);
 
 // Bill edit and delete routes - must come before /:id route
 router.get('/bills/:id/edit', isAuthenticated, billController.getEditBill);
