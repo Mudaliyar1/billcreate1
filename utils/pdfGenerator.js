@@ -3,20 +3,41 @@ const fs = require('fs');
 const path = require('path');
 const { generateUpiQRCodeDataURL } = require('./generateQRCode');
 
-// Register the Hindi font - try multiple font options
+// Register the Hindi font - try multiple font options including system fonts
 const fontOptions = [
-  path.join(__dirname, '../fonts/NotoSansDevanagari-Regular.ttf'),
-  path.join(__dirname, '../fonts/Lohit-Devanagari.ttf'),
-  path.join(__dirname, '../fonts/Tinos-Regular.ttf')
+  path.join(__dirname, '../fonts/NotoSansDevanagari-Variable.ttf'),
+  path.join(__dirname, '../fonts/Tinos-Regular.ttf'),
+  // Try system fonts that might support Hindi
+  'C:\\Windows\\Fonts\\mangal.ttf',
+  'C:\\Windows\\Fonts\\aparaj.ttf',
+  'C:\\Windows\\Fonts\\kokila.ttf',
+  'C:\\Windows\\Fonts\\utsaah.ttf'
 ];
 
-// Find the first available font
+// Find the first available font and validate it's actually a font file
 let hindiFont = null;
 for (const fontPath of fontOptions) {
   if (fs.existsSync(fontPath)) {
-    hindiFont = fontPath;
-    break;
+    try {
+      // Check if file is actually a font by reading first few bytes
+      const buffer = fs.readFileSync(fontPath, { start: 0, end: 4 });
+      const header = buffer.toString('hex');
+      // TTF files start with specific headers (in hex)
+      if (header === '00010000' || header === '4f54544f' || header === '74727565' || header === '74797031') {
+        hindiFont = fontPath;
+        console.log(`Valid Hindi font found: ${fontPath}`);
+        break;
+      } else {
+        console.warn(`Invalid font file header: ${fontPath} - ${header}`);
+      }
+    } catch (error) {
+      console.warn(`Error checking font file ${fontPath}:`, error.message);
+    }
   }
+}
+
+if (!hindiFont) {
+  console.warn('No valid Hindi font found. Hindi text will be transliterated to Roman characters.');
 }
 
 // Helper function to detect if text contains Hindi/Devanagari characters
@@ -26,34 +47,74 @@ const containsHindi = (text) => {
   return /[\u0900-\u097F]/.test(text);
 };
 
-// Simple transliteration map for common Hindi characters to Roman
+// Enhanced transliteration map for common Hindi characters to Roman
 const hindiToRoman = {
+  // Vowels
   'अ': 'a', 'आ': 'aa', 'इ': 'i', 'ई': 'ii', 'उ': 'u', 'ऊ': 'uu', 'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au',
-  'क': 'ka', 'ख': 'kha', 'ग': 'ga', 'घ': 'gha', 'च': 'cha', 'छ': 'chha', 'ज': 'ja', 'झ': 'jha',
-  'ट': 'ta', 'ठ': 'tha', 'ड': 'da', 'ढ': 'dha', 'त': 'ta', 'थ': 'tha', 'द': 'da', 'ध': 'dha',
-  'न': 'na', 'प': 'pa', 'फ': 'pha', 'ब': 'ba', 'भ': 'bha', 'म': 'ma', 'य': 'ya', 'र': 'ra',
-  'ल': 'la', 'व': 'va', 'श': 'sha', 'ष': 'sha', 'स': 'sa', 'ह': 'ha',
+  'ऋ': 'ri', 'ॠ': 'rii', 'ऌ': 'li', 'ॡ': 'lii',
+
+  // Consonants
+  'क': 'ka', 'ख': 'kha', 'ग': 'ga', 'घ': 'gha', 'ङ': 'nga',
+  'च': 'cha', 'छ': 'chha', 'ज': 'ja', 'झ': 'jha', 'ञ': 'nya',
+  'ट': 'ta', 'ठ': 'tha', 'ड': 'da', 'ढ': 'dha', 'ण': 'na',
+  'त': 'ta', 'थ': 'tha', 'द': 'da', 'ध': 'dha', 'न': 'na',
+  'प': 'pa', 'फ': 'pha', 'ब': 'ba', 'भ': 'bha', 'म': 'ma',
+  'य': 'ya', 'र': 'ra', 'ल': 'la', 'व': 'va',
+  'श': 'sha', 'ष': 'sha', 'स': 'sa', 'ह': 'ha',
+  'क्ष': 'ksha', 'त्र': 'tra', 'ज्ञ': 'gya',
+
+  // Vowel signs (matras)
   'ा': 'aa', 'ि': 'i', 'ी': 'ii', 'ु': 'u', 'ू': 'uu', 'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au',
-  '्': '', 'ं': 'n', 'ः': 'h', '।': '.', 'ॐ': 'Om'
+  'ृ': 'ri', 'ॄ': 'rii', 'ॢ': 'li', 'ॣ': 'lii',
+
+  // Special characters
+  '्': '', 'ं': 'n', 'ः': 'h', '।': '.', 'ॐ': 'Om', '॰': '.', 'ऽ': "'",
+
+  // Numbers
+  '०': '0', '१': '1', '२': '2', '३': '3', '४': '4', '५': '5', '६': '6', '७': '7', '८': '8', '९': '9'
 };
 
-// Function to transliterate Hindi text to Roman characters
+// Function to transliterate Hindi text to Roman characters with better readability
 const transliterateHindi = (text) => {
   if (!text || !containsHindi(text)) return text;
 
-  let result = '';
-  for (let char of text) {
-    if (hindiToRoman[char]) {
-      result += hindiToRoman[char];
-    } else if (/[\u0900-\u097F]/.test(char)) {
-      // If it's a Hindi character not in our map, keep it as is
-      result += char;
-    } else {
-      // Non-Hindi characters (English, numbers, symbols) pass through
-      result += char;
+  // First, handle common Hindi words with direct translations
+  const commonWords = {
+    'नागरावेला': 'Nagaravela',
+    'अहमदाबाद': 'Ahmedabad',
+    'डेकोरेशन': 'Decoration',
+    'काम': 'Kaam',
+    'सोफा': 'Sofa',
+    'सेट': 'Set',
+    'कुर्सी': 'Kursi',
+    'टेस्ट': 'Test'
+  };
+
+  // Check for common words first
+  for (const [hindi, english] of Object.entries(commonWords)) {
+    if (text.includes(hindi)) {
+      text = text.replace(new RegExp(hindi, 'g'), english);
     }
   }
-  return result;
+
+  // If still contains Hindi characters, do character-by-character transliteration
+  if (containsHindi(text)) {
+    let result = '';
+    for (let char of text) {
+      if (hindiToRoman[char]) {
+        result += hindiToRoman[char];
+      } else if (/[\u0900-\u097F]/.test(char)) {
+        // If it's a Hindi character not in our map, try to keep it readable
+        result += char;
+      } else {
+        // Non-Hindi characters (English, numbers, symbols) pass through
+        result += char;
+      }
+    }
+    return result;
+  }
+
+  return text;
 };
 
 // Helper function to set appropriate font and prepare text for PDF
@@ -64,8 +125,14 @@ const setFontAndText = (doc, text, style = 'regular') => {
     if (hindiFont) {
       // Try to use Hindi font for Devanagari text
       try {
-        doc.font(hindiFont);
-        console.log(`Using Hindi font: ${hindiFont}`);
+        // Register the font if not already registered
+        if (!doc._registeredFonts || !doc._registeredFonts['HindiFont']) {
+          doc.registerFont('HindiFont', hindiFont);
+          if (!doc._registeredFonts) doc._registeredFonts = {};
+          doc._registeredFonts['HindiFont'] = true;
+        }
+        doc.font('HindiFont');
+        console.log(`Successfully using Hindi font for: ${text.substring(0, 20)}...`);
         return { doc, text: processedText };
       } catch (error) {
         console.warn('Error loading Hindi font, using transliteration:', error.message);
@@ -141,7 +208,9 @@ const generateBillPDF = (bill, filePath) => {
       const doc = new PDFDocument({
         margin: 40,
         size: 'A4',
-         info: {
+        autoFirstPage: true,
+        bufferPages: true,
+        info: {
           Title: `Khushi Decorators - Invoice ${bill.billNumber}`,
           Author: 'Khushi Decorators',
           Subject: 'Invoice',
@@ -229,8 +298,15 @@ const generateBillPDF = (bill, filePath) => {
       // Table content
       let currentY = tableY + 30;
       const rowHeight = 25;
+      const pageHeight = doc.page.height - 80; // Leave margin for footer
 
       bill.items.forEach((item, index) => {
+        // Check if we need a new page
+        if (currentY + rowHeight > pageHeight) {
+          doc.addPage();
+          currentY = 80; // Reset Y position for new page
+        }
+
         doc.fontSize(10);
 
         // Product name with Hindi support
@@ -466,14 +542,16 @@ const generateBillPDF = (bill, filePath) => {
 
 
 
-      // Finalize the PDF
+      // Finalize the PDF and ensure proper ending
       doc.end();
 
       stream.on('finish', () => {
+        console.log(`Bill PDF generated successfully: ${filePath}`);
         resolve(filePath);
       });
 
       stream.on('error', (error) => {
+        console.error('Error writing PDF file:', error);
         reject(error);
       });
     } catch (error) {
@@ -490,6 +568,8 @@ const generateReturnBillPDF = (returnBill, filePath) => {
       const doc = new PDFDocument({
         margin: 40,
         size: 'A4',
+        autoFirstPage: true,
+        bufferPages: true,
         info: {
           Title: `Khushi Decorators - Return ${returnBill.returnNumber}`,
           Author: 'Khushi Decorators',
@@ -648,6 +728,8 @@ const generateQuotationPDF = (quotation, filePath) => {
       const doc = new PDFDocument({
         margin: 40,
         size: 'A4',
+        autoFirstPage: true,
+        bufferPages: true,
         info: {
           Title: `Khushi Decorators - Quotation ${quotation.quotationNumber}`,
           Author: 'Khushi Decorators',
