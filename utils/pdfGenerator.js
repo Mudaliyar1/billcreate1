@@ -160,9 +160,12 @@ const generateBillPDF = (bill, filePath) => {
       doc.fontSize(24)
          .font('Helvetica-Bold')
          .text('KHUSHI DECORATORS', 40, 40, { align: 'center' })
-         .fontSize(12)
+         .fontSize(10)
          .font('Helvetica')
-         .text('68/1159, Shivamod Nagar, Nr Nagurewl Hanuman Temple, Nr Union Industries Estate, Amraiwadi, Ahmedabad', 40, 110, { align: 'center' });
+         .text('68/1159, Shivamod Nagar, Nr Nagurewl Hanuman Temple, Nr Union Industries Estate, Amraiwadi, Ahmedabad', 40, 110, {
+           align: 'center',
+           width: doc.page.width - 200  // Reduce width to avoid overlap with invoice details
+         });
 
       // Invoice details
       doc.fontSize(14)
@@ -237,9 +240,9 @@ const generateBillPDF = (bill, filePath) => {
         // Category (usually English)
         doc.font('Helvetica')
            .text(item.category, 180, currentY)
-           .text(`₹${item.price.toFixed(2)}`, 320, currentY)
+           .text(`Rs.${item.price.toFixed(2)}`, 320, currentY)
            .text(item.quantity.toString(), 400, currentY)
-           .text(`₹${(item.price * item.quantity).toFixed(2)}`, 480, currentY);
+           .text(`Rs.${(item.price * item.quantity).toFixed(2)}`, 480, currentY);
 
         currentY += rowHeight;
 
@@ -259,12 +262,12 @@ const generateBillPDF = (bill, filePath) => {
         doc.fontSize(11)
            .font('Helvetica')
            .text('SUBTOTAL:', 380, totalY + 10)
-           .text(`₹${bill.subTotal.toFixed(2)}`, 480, totalY + 10);
+           .text(`Rs.${bill.subTotal.toFixed(2)}`, 480, totalY + 10);
 
         // Show GST details
         const gstY = totalY + 30;
         doc.text(`GST (${bill.gstPercentage}%)`, 380, gstY)
-           .text(`₹${bill.gstAmount.toFixed(2)}`, 480, gstY);
+           .text(`Rs.${bill.gstAmount.toFixed(2)}`, 480, gstY);
 
         // Show discount if present
         let discountY = gstY;
@@ -272,7 +275,7 @@ const generateBillPDF = (bill, filePath) => {
           discountY = gstY + 20;
           doc.fillColor('#28a745') // Green color for discount
              .text('Discount:', 380, discountY)
-             .text(`-₹${bill.discountAmount.toFixed(2)}`, 480, discountY)
+             .text(`-Rs.${bill.discountAmount.toFixed(2)}`, 480, discountY)
              .fillColor(darkText); // Reset to default color
         }
 
@@ -286,7 +289,7 @@ const generateBillPDF = (bill, filePath) => {
         doc.fontSize(12)
            .font('Helvetica-Bold')
            .text('TOTAL AMOUNT:', 380, finalTotalY + 10)
-           .text(`₹${finalTotalAmount.toFixed(2)}`, 480, finalTotalY + 10);
+           .text(`Rs.${finalTotalAmount.toFixed(2)}`, 480, finalTotalY + 10);
       } else {
         // No GST, show subtotal and discount if present
         let currentTotalY = totalY + 10;
@@ -295,14 +298,14 @@ const generateBillPDF = (bill, filePath) => {
         doc.fontSize(11)
            .font('Helvetica')
            .text('SUBTOTAL:', 380, currentTotalY)
-           .text(`₹${bill.subTotal || bill.totalAmount + (bill.discountAmount || 0)}`, 480, currentTotalY);
+           .text(`Rs.${bill.subTotal || bill.totalAmount + (bill.discountAmount || 0)}`, 480, currentTotalY);
 
         // Show discount if present
         if (bill.discountAmount && bill.discountAmount > 0) {
           currentTotalY += 20;
           doc.fillColor('#28a745') // Green color for discount
              .text('Discount:', 380, currentTotalY)
-             .text(`-₹${bill.discountAmount.toFixed(2)}`, 480, currentTotalY)
+             .text(`-Rs.${bill.discountAmount.toFixed(2)}`, 480, currentTotalY)
              .fillColor(darkText); // Reset to default color
         }
 
@@ -317,7 +320,7 @@ const generateBillPDF = (bill, filePath) => {
         doc.fontSize(12)
            .font('Helvetica-Bold')
            .text('TOTAL AMOUNT:', 380, currentTotalY + 10)
-           .text(`₹${finalTotalAmount.toFixed(2)}`, 480, currentTotalY + 10);
+           .text(`Rs.${finalTotalAmount.toFixed(2)}`, 480, currentTotalY + 10);
       }
 
       // Payment information section
@@ -356,11 +359,11 @@ const generateBillPDF = (bill, filePath) => {
            .font('Helvetica-Bold')
            .text('Amount Paid:', doc.page.width - 280, paymentY + 35)
            .font('Helvetica')
-           .text(`₹${bill.paidAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 35)
+           .text(`Rs.${bill.paidAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 35)
            .font('Helvetica-Bold')
            .text('Balance Due:', doc.page.width - 280, paymentY + 55)
            .font('Helvetica')
-           .text(`₹${correctRemainingAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 55);
+           .text(`Rs.${correctRemainingAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 55);
 
 
       } else if (bill.paymentType === 'Cash') {
@@ -368,18 +371,33 @@ const generateBillPDF = (bill, filePath) => {
         doc.font('Helvetica-Bold')
            .text('Amount Paid:', doc.page.width - 280, paymentY + 35)
            .font('Helvetica')
-           .text(`₹${bill.paidAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 35);
+           .text(`Rs.${bill.paidAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 35);
 
         if (bill.paidAmount < correctFinalTotal) {
           doc.font('Helvetica-Bold')
              .text('Balance Due:', doc.page.width - 280, paymentY + 55)
              .font('Helvetica')
-             .text(`₹${correctRemainingAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 55);
+             .text(`Rs.${correctRemainingAmount.toFixed(2)}`, doc.page.width - 180, paymentY + 55);
         }
       }
 
-      // Footer section with modern design
-      const footerY = doc.page.height - 80;
+      // Terms and conditions section - positioned below payment details to avoid QR code overlap
+      const termsY = paymentY + 120; // Position below payment details and QR code
+      doc.fontSize(11)
+         .font('Helvetica-Bold')
+         .fillColor(primaryColor)
+         .text('Terms & Conditions:', 200, termsY);
+
+      doc.fontSize(9)
+         .font('Helvetica')
+         .fillColor(darkText)
+         .text('• Sold products cannot be returned or exchanged.', 200, termsY + 20)
+         .text('• All payments should be made as per agreed terms.', 200, termsY + 35)
+         .text('• Material delivery charges may apply separately.', 200, termsY + 50)
+         .text('• Any disputes are subject to Ahmedabad jurisdiction only.', 200, termsY + 65);
+
+      // Footer section with modern design - ensure it's below terms
+      const footerY = Math.max(termsY + 100, doc.page.height - 80);
 
       // Thank you message
       doc.fillColor(darkText)
@@ -488,9 +506,12 @@ const generateReturnBillPDF = (returnBill, filePath) => {
       doc.fontSize(24)
          .font('Helvetica-Bold')
          .text('KHUSHI DECORATORS', 40, 40, { align: 'center' })
-         .fontSize(12)
+         .fontSize(10)
          .font('Helvetica')
-         .text('68/1159, Shivamod Nagar, Nr Nagurewl Hanuman Temple, Nr Union Industries Estate, Amraiwadi, Ahmedabad', 40, 110, { align: 'center' });
+         .text('68/1159, Shivamod Nagar, Nr Nagurewl Hanuman Temple, Nr Union Industries Estate, Amraiwadi, Ahmedabad', 40, 110, {
+           align: 'center',
+           width: doc.page.width - 200  // Reduce width to avoid overlap with return bill details
+         });
 
       // Return bill details
       doc.fontSize(14)
@@ -619,4 +640,268 @@ const generateReturnBillPDF = (returnBill, filePath) => {
   });
 };
 
-module.exports = { generateBillPDF, generateReturnBillPDF };
+// Generate Quotation PDF
+const generateQuotationPDF = (quotation, filePath) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Create a new PDF document with professional margins
+      const doc = new PDFDocument({
+        margin: 40,
+        size: 'A4',
+        info: {
+          Title: `Khushi Decorators - Quotation ${quotation.quotationNumber}`,
+          Author: 'Khushi Decorators',
+          Subject: 'Quotation',
+          Keywords: 'quotation, estimate, quote'
+        }
+      });
+
+      // Pipe the PDF into a file
+      const stream = fs.createWriteStream(filePath);
+      doc.pipe(stream);
+
+      // Define colors
+      const primaryColor = '#2c3e50';
+      const secondaryColor = '#7f8c8d';
+      const accentColor = '#3498db';
+      const darkText = '#2c3e50';
+
+      // Header with company info
+      doc.fontSize(24)
+         .font('Helvetica-Bold')
+         .fillColor(primaryColor)
+         .text('KHUSHI DECORATORS', 40, 40, { align: 'center' })
+         .fontSize(10)
+         .font('Helvetica')
+         .fillColor(secondaryColor)
+         .text('68/1159, Shivamod Nagar, Nr Nagurewl Hanuman Temple, Nr Union Industries Estate, Amraiwadi, Ahmedabad', 40, 110, {
+           align: 'center',
+           width: doc.page.width - 200  // Reduce width to avoid overlap with quotation details
+         });
+
+      // Quotation details
+      doc.fontSize(18)
+         .font('Helvetica-Bold')
+         .fillColor(accentColor)
+         .text('QUOTATION', doc.page.width - 150, 40)
+         .fontSize(12)
+         .font('Helvetica')
+         .fillColor(darkText)
+         .text(`#${quotation.quotationNumber}`, doc.page.width - 150, 65)
+         .text(`Date: ${new Date(quotation.quotationDate || quotation.createdAt).toLocaleDateString('en-IN')}`, doc.page.width - 150, 85)
+         .text(`Valid Until: ${new Date(quotation.validUntil).toLocaleDateString('en-IN')}`, doc.page.width - 150, 105);
+
+
+
+      // Customer and billing information section
+      const billingY = 160;
+
+      // Draw separator line
+      doc.strokeColor(primaryColor)
+         .opacity(0.3)
+         .moveTo(40, billingY)
+         .lineTo(doc.page.width - 40, billingY)
+         .stroke()
+         .opacity(1);
+
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor(primaryColor)
+         .text('QUOTE TO', 40, billingY + 20);
+
+      // Customer details
+      doc.fontSize(11)
+         .font('Helvetica')
+         .fillColor(darkText)
+         .text(`${quotation.customer.name}`, 40, billingY + 45)
+         .text(`Phone: ${quotation.customer.phone}`, 40, billingY + 65)
+         .text(`Place: ${quotation.customer.place}`, 40, billingY + 85);
+
+      if (quotation.customer.email) {
+        doc.text(`Email: ${quotation.customer.email}`, 40, billingY + 105);
+      }
+
+      // Items table header
+      const tableY = billingY + 140;
+      doc.fontSize(11)
+         .font('Helvetica-Bold')
+         .fillColor(primaryColor)
+         .text('PRODUCT', 40, tableY)
+         .text('UNIT TYPE', 250, tableY)
+         .text('QTY/MEASUREMENT', 350, tableY)
+         .text('AMOUNT', 480, tableY);
+
+      // Draw table header line
+      doc.strokeColor(primaryColor)
+         .opacity(0.5)
+         .moveTo(40, tableY + 20)
+         .lineTo(doc.page.width - 40, tableY + 20)
+         .stroke()
+         .opacity(1);
+
+      // Items
+      let currentY = tableY + 35;
+      const rowHeight = 25;
+
+      quotation.items.forEach((item, index) => {
+        doc.fontSize(10)
+           .font('Helvetica')
+           .fillColor(darkText);
+
+        // Product name with Hindi support
+        const itemNameResult = setFontAndText(doc, item.name);
+        itemNameResult.doc.text(itemNameResult.text, 40, currentY);
+
+        // Unit type and quantity/measurement
+        let unitText = '';
+        let qtyText = '';
+
+        switch (item.unitType) {
+          case 'piece':
+            unitText = 'Piece';
+            qtyText = `${item.quantity} pcs`;
+            break;
+          case 'ft':
+            unitText = 'Feet';
+            qtyText = `${item.feet} ft`;
+            break;
+          case 'rft':
+            unitText = 'Running Feet';
+            qtyText = `${item.runningFeet} rft`;
+            break;
+        }
+
+        doc.font('Helvetica')
+           .text(unitText, 250, currentY)
+           .text(qtyText, 350, currentY)
+           .text(`Rs.${item.price.toFixed(2)}`, 480, currentY);
+
+        currentY += rowHeight;
+
+        // Draw row separator
+        if (index < quotation.items.length - 1) {
+          doc.strokeColor(secondaryColor)
+             .opacity(0.3)
+             .moveTo(40, currentY - 5)
+             .lineTo(doc.page.width - 40, currentY - 5)
+             .stroke()
+             .opacity(1);
+        }
+      });
+
+      // Total section
+      const totalY = currentY + 20;
+      doc.strokeColor(primaryColor)
+         .opacity(0.5)
+         .moveTo(40, totalY)
+         .lineTo(doc.page.width - 40, totalY)
+         .stroke()
+         .opacity(1);
+
+      // Calculate totals - ensure proper number formatting
+      const subtotal = parseFloat(quotation.subTotal) || 0;
+      const gstAmount = parseFloat(quotation.gstAmount) || 0;
+      const discount = parseFloat(quotation.discountAmount) || 0;
+      const total = parseFloat(quotation.totalAmount) || 0;
+
+      let summaryY = totalY + 20;
+
+      // Summary section with fixed positions for perfect alignment
+      const labelX = 350;      // Fixed position for labels
+      const amountX = 480;     // Fixed position for amounts (right-aligned)
+
+      // Subtotal
+      doc.fontSize(11)
+         .font('Helvetica')
+         .fillColor(darkText)
+         .text('Subtotal:', labelX, summaryY, { width: 100, align: 'left' })
+         .text(`Rs.${subtotal.toFixed(2)}`, amountX, summaryY, { width: 60, align: 'right' });
+
+      summaryY += 20;
+
+      // GST if applicable
+      if (quotation.gstEnabled && gstAmount > 0) {
+        doc.fillColor(darkText)
+           .text(`GST (${quotation.gstPercentage}% ${quotation.gstType}):`, labelX, summaryY, { width: 100, align: 'left' })
+           .text(`Rs.${gstAmount.toFixed(2)}`, amountX, summaryY, { width: 60, align: 'right' });
+        summaryY += 20;
+      }
+
+      // Discount if applicable
+      if (discount > 0) {
+        doc.fillColor('#e74c3c')
+           .text('Discount:', labelX, summaryY, { width: 100, align: 'left' })
+           .text(`-Rs.${discount.toFixed(2)}`, amountX, summaryY, { width: 60, align: 'right' });
+        summaryY += 20;
+      }
+
+      // Add separator line
+      summaryY += 5;
+      doc.strokeColor('#cccccc')
+         .lineWidth(1)
+         .moveTo(labelX, summaryY)
+         .lineTo(amountX + 60, summaryY)
+         .stroke();
+
+      summaryY += 15;
+
+      // Total Amount
+      doc.fontSize(13)
+         .font('Helvetica-Bold')
+         .fillColor(primaryColor)
+         .text('Total Amount:', labelX, summaryY, { width: 100, align: 'left' })
+         .text(`Rs.${total.toFixed(2)}`, amountX, summaryY, { width: 60, align: 'right' });
+
+      // Terms and conditions
+      const termsY = summaryY + 40;
+      doc.fontSize(11)
+         .font('Helvetica-Bold')
+         .fillColor(primaryColor)
+         .text('Terms & Conditions:', 40, termsY);
+
+      doc.fontSize(9)
+         .font('Helvetica')
+         .fillColor(darkText)
+         .text('• This quotation is valid until the date mentioned above.', 40, termsY + 20)
+         .text('• Prices are subject to change without prior notice.', 40, termsY + 35)
+         .text('• All payments should be made as per agreed terms.', 40, termsY + 50)
+         .text('• Material delivery charges may apply separately.', 40, termsY + 65);
+
+      // Footer section - ensure it's below terms
+      const footerY = Math.max(termsY + 100, doc.page.height - 80);
+
+      // Separator line
+      doc.strokeColor(primaryColor)
+         .opacity(0.3)
+         .moveTo(40, footerY - 10)
+         .lineTo(doc.page.width - 40, footerY - 10)
+         .stroke()
+         .opacity(1);
+
+      // Contact information
+      doc.fillColor(secondaryColor)
+         .fontSize(10)
+         .font('Helvetica')
+         .text('Kushi Decorators', 160, footerY + 5)
+         .text('|', 240, footerY + 5)
+         .text('Phone: +91 9724066417', 260, footerY + 5)
+         .text('|', 420, footerY + 5)
+         .text('Email: info@kushitrader.com', 440, footerY + 5);
+
+      // Finalize the PDF
+      doc.end();
+
+      stream.on('finish', () => {
+        resolve(filePath);
+      });
+
+      stream.on('error', (error) => {
+        reject(error);
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+module.exports = { generateBillPDF, generateReturnBillPDF, generateQuotationPDF };

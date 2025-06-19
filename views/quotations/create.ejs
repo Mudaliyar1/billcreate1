@@ -1,0 +1,557 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/quotations/create' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Create Quotation</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <a href="/quotations" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Quotations
+          </a>
+        </div>
+      </div>
+
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title mb-0">Quotation Information</h5>
+            </div>
+            <div class="card-body">
+              <form id="quotationForm" action="/quotations/create" method="POST" onsubmit="return validateQuotationForm()">
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5>Customer Information</h5>
+                    <hr>
+                  </div>
+
+                  <div class="col-md-12 mb-3">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="unknownCustomer" name="unknownCustomer">
+                      <label class="form-check-label" for="unknownCustomer">
+                        <strong>Create quotation for unknown customer</strong>
+                      </label>
+                    </div>
+                    <small class="form-text text-muted">Enable this to create a quotation without customer details.</small>
+                  </div>
+
+                  <div class="col-md-12 mb-3">
+                    <label for="customerSearch" class="form-label">Search Customer</label>
+                    <div class="input-group mb-3">
+                      <input type="text" class="form-control" id="customerSearch" placeholder="Search by name or phone...">
+                      <button class="btn btn-outline-secondary" type="button" id="searchCustomerBtn">
+                        <i class="fas fa-search"></i>
+                      </button>
+                    </div>
+                    <div id="customerSearchResults" class="list-group mt-2" style="display: none; max-height: 200px; overflow-y: auto; position: absolute; width: 100%; z-index: 1000; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border: 1px solid #ddd;"></div>
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <label for="customerName" class="form-label">Customer Name</label>
+                    <input type="text" class="form-control" id="customerName" name="customerName" required>
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <label for="customerPhone" class="form-label">Phone Number</label>
+                    <input type="text" class="form-control" id="customerPhone" name="customerPhone" required>
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <label for="customerPlace" class="form-label">Place</label>
+                    <input type="text" class="form-control" id="customerPlace" name="customerPlace" required>
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <label for="customerEmail" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="customerEmail" name="customerEmail" placeholder="Optional">
+                    <small class="form-text text-muted">If provided, quotation will be sent to this email</small>
+                  </div>
+                </div>
+
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5>Products</h5>
+                    <hr>
+                  </div>
+
+                  <div class="col-md-12 mb-3">
+                    <div id="productContainer">
+                      <!-- Product rows will be added here -->
+                    </div>
+
+                    <button type="button" id="addProductBtn" class="btn btn-outline-primary">
+                      <i class="fas fa-plus"></i> Add Product
+                    </button>
+                  </div>
+                </div>
+
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5>Quotation Details</h5>
+                    <hr>
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <label for="quotationDate" class="form-label">Quotation Date</label>
+                    <input type="date" class="form-control" id="quotationDate" name="quotationDate" value="<%= new Date().toISOString().split('T')[0] %>">
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <label for="validUntil" class="form-label">Valid Until</label>
+                    <input type="date" class="form-control" id="validUntil" name="validUntil" value="<%= new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0] %>">
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <label for="discountAmount" class="form-label">Discount Amount (₹)</label>
+                    <input type="number" class="form-control" id="discountAmount" name="discountAmount" min="0" step="0.01" value="0" onchange="updateTotalAmount()" oninput="updateTotalAmount()">
+                  </div>
+                </div>
+
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <h5>GST Information</h5>
+                    <hr>
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="gstEnabled" name="gstEnabled" onchange="toggleGstFields()">
+                      <label class="form-check-label" for="gstEnabled">
+                        Enable GST
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="col-md-3 mb-3" id="gstTypeField" style="display: none;">
+                    <label for="gstType" class="form-label">GST Type</label>
+                    <select class="form-select" id="gstType" name="gstType" onchange="updateTotalAmount()">
+                      <option value="">Select GST Type</option>
+                      <option value="CGST+SGST">CGST + SGST</option>
+                      <option value="IGST">IGST</option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-3 mb-3" id="gstPercentageField" style="display: none;">
+                    <label for="gstPercentage" class="form-label">GST Percentage (%)</label>
+                    <input type="number" class="form-control" id="gstPercentage" name="gstPercentage" min="0" max="100" step="0.01" onchange="updateTotalAmount()" oninput="updateTotalAmount()">
+                  </div>
+                </div>
+
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <div class="card bg-light">
+                      <div class="card-body">
+                        <h5>Total Amount: <span id="totalAmount">₹0.00</span></h5>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-12">
+                    <button type="submit" class="btn btn-primary">
+                      <i class="fas fa-save"></i> Create Quotation
+                    </button>
+                    <a href="/quotations" class="btn btn-secondary ms-2">
+                      <i class="fas fa-times"></i> Cancel
+                    </a>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+// Customer search functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('customerSearch');
+  const searchBtn = document.getElementById('searchCustomerBtn');
+  const resultsContainer = document.getElementById('customerSearchResults');
+  const nameInput = document.getElementById('customerName');
+  const phoneInput = document.getElementById('customerPhone');
+  const placeInput = document.getElementById('customerPlace');
+  const emailInput = document.getElementById('customerEmail');
+
+  // Function to search customers
+  const searchCustomers = () => {
+    const query = searchInput.value.trim();
+
+    if (query.length < 2) {
+      resultsContainer.style.display = 'none';
+      return;
+    }
+
+    resultsContainer.innerHTML = '<div class="list-group-item">Searching...</div>';
+    resultsContainer.style.display = 'block';
+
+    fetch(`/api/customers/search?query=${encodeURIComponent(query)}`)
+      .then(response => response.json())
+      .then(customers => {
+        resultsContainer.innerHTML = '';
+
+        if (customers.length === 0) {
+          resultsContainer.innerHTML = '<div class="list-group-item">No customers found</div>';
+        } else {
+          customers.forEach(customer => {
+            const item = document.createElement('a');
+            item.href = '#';
+            item.className = 'list-group-item list-group-item-action';
+            item.innerHTML = `<strong>${customer.name}</strong> - ${customer.phone} (${customer.place})`;
+
+            item.addEventListener('click', (e) => {
+              e.preventDefault();
+              nameInput.value = customer.name;
+              phoneInput.value = customer.phone;
+              placeInput.value = customer.place;
+              if (customer.email) {
+                emailInput.value = customer.email;
+              }
+              resultsContainer.style.display = 'none';
+            });
+
+            resultsContainer.appendChild(item);
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Customer search error:', error);
+        resultsContainer.innerHTML = `<div class="list-group-item text-danger">Error: ${error.message}</div>`;
+      });
+  };
+
+  // Search on button click
+  searchBtn.addEventListener('click', searchCustomers);
+
+  // Search on Enter key press
+  searchInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      searchCustomers();
+    }
+  });
+
+  // Search as you type (with debounce)
+  let searchTimeout;
+  searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(searchCustomers, 300);
+  });
+
+  // Unknown customer toggle functionality
+  const unknownCustomerToggle = document.getElementById('unknownCustomer');
+  const customerSearchDiv = document.querySelector('.col-md-12 mb-3:has(#customerSearch)');
+
+  unknownCustomerToggle.addEventListener('change', function() {
+    if (this.checked) {
+      // Hide customer search
+      if (customerSearchDiv) {
+        customerSearchDiv.style.display = 'none';
+      }
+
+      // Fill all fields with "Unknown" and disable them
+      nameInput.value = 'Unknown';
+      phoneInput.value = 'Unknown';
+      placeInput.value = 'Unknown';
+      emailInput.value = '';
+
+      // Disable the fields
+      nameInput.disabled = true;
+      phoneInput.disabled = true;
+      placeInput.disabled = true;
+      emailInput.disabled = true;
+
+      // Remove required attribute temporarily
+      nameInput.removeAttribute('required');
+      phoneInput.removeAttribute('required');
+      placeInput.removeAttribute('required');
+    } else {
+      // Show customer search
+      if (customerSearchDiv) {
+        customerSearchDiv.style.display = 'block';
+      }
+
+      // Clear all fields and enable them
+      nameInput.value = '';
+      phoneInput.value = '';
+      placeInput.value = '';
+      emailInput.value = '';
+
+      // Enable the fields
+      nameInput.disabled = false;
+      phoneInput.disabled = false;
+      placeInput.disabled = false;
+      emailInput.disabled = false;
+
+      // Restore required attributes
+      nameInput.setAttribute('required', '');
+      phoneInput.setAttribute('required', '');
+      placeInput.setAttribute('required', '');
+    }
+  });
+});
+
+// Product management functionality
+const addBtn = document.getElementById('addProductBtn');
+const productContainer = document.getElementById('productContainer');
+
+// Function to add product row
+const addProductRow = () => {
+  console.log('Adding new product row');
+  const productRow = document.createElement('div');
+  productRow.className = 'row product-row mb-3';
+
+  productRow.innerHTML = `
+    <div class="col-md-3 mb-2">
+      <label class="form-label">Product</label>
+      <select class="form-select product-select" name="productIds[]" required>
+        <option value="" selected disabled>Select Product</option>
+      </select>
+    </div>
+
+    <div class="col-md-1 mb-2">
+      <label class="form-label">Unit Type</label>
+      <select class="form-select unit-type-select" name="unitTypes[]" required onchange="toggleUnitFields(this)">
+        <option value="piece">Piece</option>
+        <option value="ft">Feet</option>
+        <option value="rft">Running Feet</option>
+      </select>
+    </div>
+
+    <div class="col-md-1 mb-2 quantity-field">
+      <label class="form-label">Quantity</label>
+      <input type="number" class="form-control quantity-input" name="quantities[]" min="1" value="1" required onchange="updateAmountForRow(this)" oninput="updateAmountForRow(this)">
+    </div>
+
+    <div class="col-md-1 mb-2 feet-field" style="display: none;">
+      <label class="form-label">Feet</label>
+      <input type="number" class="form-control feet-input" name="feet[]" min="0" step="0.01" value="0" onchange="updateAmountForRow(this)" oninput="updateAmountForRow(this)">
+    </div>
+
+    <div class="col-md-1 mb-2 rft-field" style="display: none;">
+      <label class="form-label">Running Feet</label>
+      <input type="number" class="form-control rft-input" name="runningFeet[]" min="0" step="0.01" value="0" onchange="updateAmountForRow(this)" oninput="updateAmountForRow(this)">
+    </div>
+
+    <div class="col-md-2 mb-2">
+      <label class="form-label">Amount (₹)</label>
+      <input type="text" class="form-control product-amount" readonly>
+    </div>
+
+    <div class="col-md-1 mb-2 d-flex align-items-end">
+      <button type="button" class="btn btn-outline-danger remove-product-btn">
+        <i class="fas fa-trash"></i>
+      </button>
+    </div>
+  `;
+
+  productContainer.appendChild(productRow);
+
+  // Add event listeners
+  const productSelect = productRow.querySelector('.product-select');
+  const removeBtn = productRow.querySelector('.remove-product-btn');
+
+  // Load all quotation products immediately
+  fetch('/api/quotation-products/all')
+    .then(response => response.json())
+    .then(products => {
+      productSelect.innerHTML = '<option value="" selected disabled>Select Product</option>';
+
+      if (products.length === 0) {
+        const option = document.createElement('option');
+        option.value = "";
+        option.textContent = 'No products available';
+        option.disabled = true;
+        productSelect.appendChild(option);
+        return;
+      }
+
+      products.forEach(product => {
+        const option = document.createElement('option');
+        option.value = product._id;
+        option.textContent = `${product.name} - Rs.${product.price.toFixed(2)}`;
+        option.dataset.price = product.price;
+        option.dataset.pricePerFt = product.pricePerFt || 0;
+        option.dataset.pricePerRft = product.pricePerRft || 0;
+        productSelect.appendChild(option);
+      });
+
+      productSelect.addEventListener('change', function() {
+        updateAmountForProductSelect(this);
+      });
+    })
+    .catch(error => {
+      console.error('Fetch products error:', error);
+      productSelect.innerHTML = '<option value="" selected disabled>Error loading products</option>';
+    });
+
+  removeBtn.addEventListener('click', function() {
+    productRow.remove();
+    updateTotalAmount();
+  });
+};
+
+// Add first product row on page load
+addBtn.addEventListener('click', addProductRow);
+
+// Add first row automatically
+addProductRow();
+
+// Function to toggle unit fields based on unit type
+function toggleUnitFields(selectElement) {
+  const row = selectElement.closest('.product-row');
+  const quantityField = row.querySelector('.quantity-field');
+  const feetField = row.querySelector('.feet-field');
+  const rftField = row.querySelector('.rft-field');
+  const unitType = selectElement.value;
+
+  // Hide all fields first
+  quantityField.style.display = 'none';
+  feetField.style.display = 'none';
+  rftField.style.display = 'none';
+
+  // Show relevant field based on unit type
+  switch (unitType) {
+    case 'piece':
+      quantityField.style.display = 'block';
+      break;
+    case 'ft':
+      feetField.style.display = 'block';
+      break;
+    case 'rft':
+      rftField.style.display = 'block';
+      break;
+  }
+
+  // Update amount calculation
+  updateAmountForRow(selectElement);
+}
+
+// Function to update amount for a product row
+function updateAmountForRow(element) {
+  const row = element.closest('.product-row');
+  const productSelect = row.querySelector('.product-select');
+  const unitTypeSelect = row.querySelector('.unit-type-select');
+  const quantityInput = row.querySelector('.quantity-input');
+  const feetInput = row.querySelector('.feet-input');
+  const rftInput = row.querySelector('.rft-input');
+  const amountInput = row.querySelector('.product-amount');
+
+  if (!productSelect.value) return;
+
+  const selectedOption = productSelect.querySelector(`option[value="${productSelect.value}"]`);
+  if (!selectedOption) return;
+
+  const unitType = unitTypeSelect.value;
+  let amount = 0;
+
+  switch (unitType) {
+    case 'piece':
+      const price = parseFloat(selectedOption.dataset.price) || 0;
+      const quantity = parseInt(quantityInput.value) || 0;
+      amount = price * quantity;
+      break;
+    case 'ft':
+      const pricePerFt = parseFloat(selectedOption.dataset.pricePerFt) || 0;
+      const feet = parseFloat(feetInput.value) || 0;
+      amount = pricePerFt * feet;
+      break;
+    case 'rft':
+      const pricePerRft = parseFloat(selectedOption.dataset.pricePerRft) || 0;
+      const rft = parseFloat(rftInput.value) || 0;
+      amount = pricePerRft * rft;
+      break;
+  }
+
+  amountInput.value = 'Rs.' + amount.toFixed(2);
+  updateTotalAmount();
+}
+
+// Function to update amount when product changes
+function updateAmountForProductSelect(selectElement) {
+  updateAmountForRow(selectElement);
+}
+
+// Function to update total amount
+function updateTotalAmount() {
+  let total = 0;
+  const productAmounts = document.querySelectorAll('.product-amount');
+
+  productAmounts.forEach(amountInput => {
+    const value = amountInput.value.replace('Rs.', '');
+    const amount = parseFloat(value) || 0;
+    total += amount;
+  });
+
+  // Apply GST if enabled
+  const gstEnabled = document.getElementById('gstEnabled').checked;
+  if (gstEnabled) {
+    const gstPercentage = parseFloat(document.getElementById('gstPercentage').value) || 0;
+    const gstAmount = (total * gstPercentage) / 100;
+    total += gstAmount;
+  }
+
+  // Apply discount
+  const discountAmount = parseFloat(document.getElementById('discountAmount').value) || 0;
+  total = Math.max(0, total - discountAmount);
+
+  document.getElementById('totalAmount').textContent = 'Rs.' + total.toFixed(2);
+}
+
+// Function to toggle GST fields
+function toggleGstFields() {
+  const gstEnabled = document.getElementById('gstEnabled').checked;
+  const gstTypeField = document.getElementById('gstTypeField');
+  const gstPercentageField = document.getElementById('gstPercentageField');
+
+  if (gstEnabled) {
+    gstTypeField.style.display = 'block';
+    gstPercentageField.style.display = 'block';
+    document.getElementById('gstType').setAttribute('required', '');
+    document.getElementById('gstPercentage').setAttribute('required', '');
+  } else {
+    gstTypeField.style.display = 'none';
+    gstPercentageField.style.display = 'none';
+    document.getElementById('gstType').removeAttribute('required');
+    document.getElementById('gstPercentage').removeAttribute('required');
+  }
+
+  updateTotalAmount();
+}
+
+// Function to validate quotation form
+function validateQuotationForm() {
+  const productRows = document.querySelectorAll('.product-row');
+  if (productRows.length === 0) {
+    alert('Please add at least one product');
+    return false;
+  }
+
+  let hasValidProduct = false;
+  productRows.forEach(row => {
+    const productSelect = row.querySelector('.product-select');
+    if (productSelect.value) {
+      hasValidProduct = true;
+    }
+  });
+
+  if (!hasValidProduct) {
+    alert('Please select at least one product');
+    return false;
+  }
+
+  return true;
+}
+</script>
+
+<%- include('../partials/footer') %>

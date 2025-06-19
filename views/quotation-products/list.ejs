@@ -1,0 +1,138 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: '/quotation-products' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Quotation Products</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <a href="/quotation-products/create" class="btn btn-sm btn-primary">
+            <i class="fas fa-plus"></i> Add New Product
+          </a>
+        </div>
+      </div>
+
+      <!-- Flash Messages -->
+      <% if (error && error.length > 0) { %>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <%= error %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <% } %>
+
+      <% if (success && success.length > 0) { %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <%= success %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <% } %>
+
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title mb-0">All Quotation Products</h5>
+            </div>
+            <div class="card-body">
+              <% if (quotationProducts && quotationProducts.length > 0) { %>
+                <div class="table-responsive">
+                  <table class="table table-striped table-hover">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Unit Type</th>
+                        <th>Piece Price</th>
+                        <th>Feet Price</th>
+                        <th>Running Feet Price</th>
+                        <th>Quantity</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% quotationProducts.forEach(product => { %>
+                        <tr>
+                          <td><strong><%= product.name %></strong></td>
+                          <td>
+                            <span class="badge bg-secondary"><%= product.category %></span>
+                          </td>
+                          <td>
+                            <% if (product.unitType === 'piece') { %>
+                              <span class="badge bg-primary">Piece</span>
+                            <% } else if (product.unitType === 'ft') { %>
+                              <span class="badge bg-info">Feet</span>
+                            <% } else if (product.unitType === 'rft') { %>
+                              <span class="badge bg-warning">Running Feet</span>
+                            <% } %>
+                          </td>
+                          <td>
+                            <% if (product.price > 0) { %>
+                              ₹<%= product.price.toFixed(2) %>
+                            <% } else { %>
+                              <span class="text-muted">-</span>
+                            <% } %>
+                          </td>
+                          <td>
+                            <% if (product.pricePerFt > 0) { %>
+                              ₹<%= product.pricePerFt.toFixed(2) %>/ft
+                            <% } else { %>
+                              <span class="text-muted">-</span>
+                            <% } %>
+                          </td>
+                          <td>
+                            <% if (product.pricePerRft > 0) { %>
+                              ₹<%= product.pricePerRft.toFixed(2) %>/rft
+                            <% } else { %>
+                              <span class="text-muted">-</span>
+                            <% } %>
+                          </td>
+                          <td>
+                            <% if (product.quantity <= 5 && product.quantity > 0) { %>
+                              <span class="text-warning"><%= product.quantity %> (Low Stock)</span>
+                            <% } else if (product.quantity === 0) { %>
+                              <span class="text-danger">Out of Stock</span>
+                            <% } else { %>
+                              <%= product.quantity %>
+                            <% } %>
+                          </td>
+                          <td>
+                            <div class="btn-group" role="group">
+                              <a href="/quotation-products/<%= product._id %>/edit" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                <i class="fas fa-edit"></i>
+                              </a>
+                              <a href="/quotation-products/<%= product._id %>/delete" class="btn btn-sm btn-outline-danger" title="Delete" onclick="return confirm('Are you sure you want to delete <%= product.name %>? This action cannot be undone.');">
+                                <i class="fas fa-trash"></i>
+                              </a>
+                            </div>
+                          </td>
+                        </tr>
+                      <% }); %>
+                    </tbody>
+                  </table>
+                </div>
+              <% } else { %>
+                <div class="text-center py-5">
+                  <i class="fas fa-cube fa-3x text-muted mb-3"></i>
+                  <h5 class="text-muted">No quotation products found</h5>
+                  <p class="text-muted">Add your first quotation product to get started.</p>
+                  <a href="/quotation-products/create" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add New Product
+                  </a>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+
+
+<%- include('../partials/footer') %>
