@@ -2,6 +2,7 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 const { generateUpiQRCodeDataURL } = require('./generateQRCode');
+const BillTemplate = require('../models/BillTemplate');
 
 // Register the Hindi font - try multiple font options including system fonts
 const fontOptions = [
@@ -19,19 +20,25 @@ let hindiFont = null;
 for (const fontPath of fontOptions) {
   if (fs.existsSync(fontPath)) {
     try {
-      // Check if file is actually a font by reading first few bytes
-      const buffer = fs.readFileSync(fontPath, { start: 0, end: 4 });
+      // Check if file is actually a font by reading first few bytes (silently)
+      const fd = fs.openSync(fontPath, 'r');
+      const buffer = Buffer.alloc(4);
+      fs.readSync(fd, buffer, 0, 4, 0);
+      fs.closeSync(fd);
       const header = buffer.toString('hex');
       // TTF files start with specific headers (in hex)
       if (header === '00010000' || header === '4f54544f' || header === '74727565' || header === '74797031') {
         hindiFont = fontPath;
-        console.log(`Valid Hindi font found: ${fontPath}`);
+        // Only log in development mode
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`Valid Hindi font found: ${fontPath}`);
+        }
         break;
       } else {
-        console.warn(`Invalid font file header: ${fontPath} - ${header}`);
+        // Silently skip invalid fonts
       }
     } catch (error) {
-      console.warn(`Error checking font file ${fontPath}:`, error.message);
+      // Silently skip fonts that can't be read
     }
   }
 }
@@ -132,14 +139,13 @@ const setFontAndText = (doc, text, style = 'regular') => {
           doc._registeredFonts['HindiFont'] = true;
         }
         doc.font('HindiFont');
-        console.log(`Successfully using Hindi font for: ${text.substring(0, 20)}...`);
         return { doc, text: processedText };
       } catch (error) {
-        console.warn('Error loading Hindi font, using transliteration:', error.message);
+        // Silently fall back to transliteration
         processedText = transliterateHindi(text);
       }
     } else {
-      console.warn('Hindi text detected but no suitable font available, using transliteration');
+      // Silently use transliteration when no font available
       processedText = transliterateHindi(text);
     }
   }
@@ -986,4 +992,340 @@ const generateQuotationPDF = (quotation, filePath) => {
   });
 };
 
-module.exports = { generateBillPDF, generateReturnBillPDF, generateQuotationPDF };
+// Generate PDF using custom template
+const generateBillPDFWithTemplate = async (bill, templateId = null, userId = null) => {
+  try {
+    // Get the template
+    let template;
+    if (templateId) {
+      template = await BillTemplate.findOne({ _id: templateId, createdBy: userId });
+    } else if (userId) {
+      template = await BillTemplate.findOne({ createdBy: userId, isDefault: true });
+    }
+
+    if (!template) {
+      // Fall back to original PDF generation - create a temporary file and return buffer
+      const tempPath = path.join(__dirname, '../temp', `temp-${Date.now()}.pdf`);
+      const tempDir = path.dirname(tempPath);
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
+      await generateBillPDF(bill, tempPath);
+      const buffer = fs.readFileSync(tempPath);
+      fs.unlinkSync(tempPath); // Clean up temp file
+      return buffer;
+    }
+
+    // Create PDF document with template settings
+    const doc = new PDFDocument({
+      size: [template.pageSettings.width, template.pageSettings.height],
+      margin: template.pageSettings.margin.top,
+      bufferPages: true,
+      autoFirstPage: true
+    });
+
+    const buffers = [];
+    doc.on('data', buffers.push.bind(buffers));
+
+    // Generate QR code if needed
+    let qrCodeDataURL = null;
+    if (template.elements.some(el => el.type === 'qr_code' && el.visible)) {
+      qrCodeDataURL = await generateUpiQRCodeDataURL(bill);
+    }
+
+    // Render elements based on template
+    const sortedElements = template.elements
+      .filter(el => el.visible)
+      .sort((a, b) => a.order - b.order);
+
+    for (const element of sortedElements) {
+      await renderTemplateElement(doc, element, bill, qrCodeDataURL);
+    }
+
+    doc.end();
+
+    return new Promise((resolve, reject) => {
+      doc.on('end', () => {
+        const pdfData = Buffer.concat(buffers);
+        resolve(pdfData);
+      });
+      doc.on('error', reject);
+    });
+
+  } catch (error) {
+    console.error('Error generating PDF with template:', error);
+    // Fall back to original PDF generation - create a temporary file and return buffer
+    const tempPath = path.join(__dirname, '../temp', `temp-${Date.now()}.pdf`);
+    const tempDir = path.dirname(tempPath);
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    await generateBillPDF(bill, tempPath);
+    const buffer = fs.readFileSync(tempPath);
+    fs.unlinkSync(tempPath); // Clean up temp file
+    return buffer;
+  }
+};
+
+// Render individual template element
+const renderTemplateElement = async (doc, element, bill, qrCodeDataURL) => {
+  const { position, size, style } = element;
+
+  // Set font and style
+  const fontResult = setFontAndText(doc, '', style.fontWeight || 'normal');
+  doc = fontResult.doc;
+
+  doc.fontSize(style.fontSize || 12);
+  doc.fillColor(style.color || '#000000');
+
+  // Position the cursor
+  const x = position.x;
+  const y = position.y;
+
+  switch (element.type) {
+    case 'company_header':
+      renderCompanyHeader(doc, x, y, size, style);
+      break;
+
+    case 'company_address':
+      renderCompanyAddress(doc, x, y, size, style);
+      break;
+
+    case 'bill_number':
+      renderBillNumber(doc, x, y, size, style, bill);
+      break;
+
+    case 'bill_date':
+      renderBillDate(doc, x, y, size, style, bill);
+      break;
+
+    case 'customer_info':
+      renderCustomerInfo(doc, x, y, size, style, bill);
+      break;
+
+    case 'work_details':
+      renderWorkDetails(doc, x, y, size, style, bill);
+      break;
+
+    case 'items_table':
+      renderItemsTable(doc, x, y, size, style, bill);
+      break;
+
+    case 'total_amount':
+      renderTotalAmount(doc, x, y, size, style, bill);
+      break;
+
+    case 'payment_details':
+      renderPaymentDetails(doc, x, y, size, style, bill);
+      break;
+
+    case 'qr_code':
+      if (qrCodeDataURL) {
+        await renderQRCode(doc, x, y, size, qrCodeDataURL);
+      }
+      break;
+
+    case 'footer':
+      renderFooter(doc, x, y, size, style);
+      break;
+
+    case 'custom_text':
+      renderCustomText(doc, x, y, size, style, element.customText || '');
+      break;
+  }
+};
+
+// Individual element renderers
+const renderCompanyHeader = (doc, x, y, size, style) => {
+  const text = 'KHUSHI DECORATORS';
+  doc.text(text, x, y, {
+    width: size.width,
+    height: size.height,
+    align: style.textAlign || 'center'
+  });
+};
+
+const renderCompanyAddress = (doc, x, y, size, style) => {
+  const address = '68/1159, Shivamod Nagar, Nr Nagurewl Hanuman Temple, Nagarvel Hanuman Road, Ahmedabad-382350';
+  doc.text(address, x, y, {
+    width: size.width,
+    height: size.height,
+    align: style.textAlign || 'center'
+  });
+};
+
+const renderBillNumber = (doc, x, y, size, style, bill) => {
+  const text = `INVOICE #${bill.billNumber}`;
+  doc.text(text, x, y, {
+    width: size.width,
+    height: size.height,
+    align: style.textAlign || 'left'
+  });
+};
+
+const renderBillDate = (doc, x, y, size, style, bill) => {
+  const date = new Date(bill.billDate || bill.date || bill.createdAt).toLocaleDateString('en-GB');
+  const text = `Date: ${date}`;
+  doc.text(text, x, y, {
+    width: size.width,
+    height: size.height,
+    align: style.textAlign || 'left'
+  });
+};
+
+const renderCustomerInfo = (doc, x, y, size, style, bill) => {
+  // Handle both bill.customer.name and bill.customerName formats
+  const customerName = bill.customer?.name || bill.customerName || '';
+  const customerPhone = bill.customer?.phone || bill.customerPhone || '';
+  const customerPlace = bill.customer?.place || bill.place || '';
+
+  const fontResult = setFontAndText(doc, customerName, style.fontWeight || 'normal');
+  const transliteratedName = fontResult.text;
+
+  let text = `Customer: ${transliteratedName}`;
+  if (customerPhone) text += `\nPhone: ${customerPhone}`;
+  if (customerPlace) {
+    const placeResult = setFontAndText(doc, customerPlace, style.fontWeight || 'normal');
+    text += `\nPlace: ${placeResult.text}`;
+  }
+
+  doc.text(text, x, y, {
+    width: size.width,
+    height: size.height,
+    align: style.textAlign || 'left'
+  });
+};
+
+const renderWorkDetails = (doc, x, y, size, style, bill) => {
+  let text = '';
+  if (bill.work) {
+    const workResult = setFontAndText(doc, bill.work, style.fontWeight || 'normal');
+    text += `Work: ${workResult.text}\n`;
+  }
+  if (bill.pickedBy) text += `Picked By: ${bill.pickedBy}`;
+
+  doc.text(text, x, y, {
+    width: size.width,
+    height: size.height,
+    align: style.textAlign || 'left'
+  });
+};
+
+const renderTotalAmount = (doc, x, y, size, style, bill) => {
+  const total = bill.totalAmount || 0;
+  const text = `TOTAL AMOUNT: Rs.${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+  doc.text(text, x, y, {
+    width: size.width,
+    height: size.height,
+    align: style.textAlign || 'right'
+  });
+};
+
+const renderPaymentDetails = (doc, x, y, size, style, bill) => {
+  let text = `Payment Method: ${bill.paymentType || bill.paymentMethod || 'Cash'}`;
+  if (bill.paidAmount || bill.amountPaid) {
+    const paidAmount = bill.paidAmount || bill.amountPaid;
+    text += `\nAmount Paid: Rs.${paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+  }
+
+  doc.text(text, x, y, {
+    width: size.width,
+    height: size.height,
+    align: style.textAlign || 'left'
+  });
+};
+
+const renderFooter = (doc, x, y, size, style) => {
+  const text = 'Thank you for your business!\nSold products cannot be returned.';
+  doc.text(text, x, y, {
+    width: size.width,
+    height: size.height,
+    align: style.textAlign || 'center'
+  });
+};
+
+const renderCustomText = (doc, x, y, size, style, customText) => {
+  if (customText) {
+    const textResult = setFontAndText(doc, customText, style.fontWeight || 'normal');
+    doc.text(textResult.text, x, y, {
+      width: size.width,
+      height: size.height,
+      align: style.textAlign || 'left'
+    });
+  }
+};
+
+const renderItemsTable = (doc, x, y, size, style, bill) => {
+  // This is a simplified table renderer - you can enhance it further
+  const startY = y;
+  let currentY = startY;
+
+  // Table headers
+  doc.fontSize(style.fontSize || 10);
+  const headers = ['ITEM', 'CATEGORY', 'PRICE', 'QTY', 'AMOUNT'];
+  const colWidths = [size.width * 0.3, size.width * 0.2, size.width * 0.15, size.width * 0.1, size.width * 0.25];
+
+  let currentX = x;
+  headers.forEach((header, index) => {
+    doc.text(header, currentX, currentY, { width: colWidths[index], align: 'center' });
+    currentX += colWidths[index];
+  });
+
+  currentY += 20;
+
+  // Table rows
+  if (bill.items && bill.items.length > 0) {
+    bill.items.forEach(item => {
+      currentX = x;
+      const itemName = setFontAndText(doc, item.name || item.product || '', 'normal').text;
+      const categoryName = setFontAndText(doc, item.category || '', 'normal').text;
+
+      const rowData = [
+        itemName,
+        categoryName,
+        `Rs.${(item.price || 0).toFixed(2)}`,
+        (item.quantity || 0).toString(),
+        `Rs.${((item.price || 0) * (item.quantity || 0)).toFixed(2)}`
+      ];
+
+      rowData.forEach((data, index) => {
+        doc.text(data, currentX, currentY, { width: colWidths[index], align: index > 1 ? 'right' : 'left' });
+        currentX += colWidths[index];
+      });
+
+      currentY += 15;
+    });
+  }
+};
+
+const renderQRCode = async (doc, x, y, size, qrCodeDataURL) => {
+  try {
+    if (qrCodeDataURL && qrCodeDataURL.startsWith('data:image')) {
+      const base64Data = qrCodeDataURL.split(',')[1];
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+
+      doc.image(imageBuffer, x, y, {
+        width: size.width,
+        height: size.height
+      });
+    }
+  } catch (error) {
+    console.error('Error rendering QR code:', error);
+    // Fallback text
+    doc.text('[QR CODE]', x, y, {
+      width: size.width,
+      height: size.height,
+      align: 'center'
+    });
+  }
+};
+
+module.exports = {
+  generateBillPDF,
+  generateReturnBillPDF,
+  generateQuotationPDF,
+  generateBillPDFWithTemplate
+};

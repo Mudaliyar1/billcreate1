@@ -3,7 +3,7 @@ const Customer = require('../models/Customer');
 const Product = require('../models/Product');
 const ReturnBill = require('../models/ReturnBill');
 const Admin = require('../models/Admin');
-const { generateBillPDF } = require('../utils/pdfGenerator');
+const { generateBillPDF, generateBillPDFWithTemplate } = require('../utils/pdfGenerator');
 const { sendBillEmail, isValidEmailFormat } = require('../utils/emailService');
 const fs = require('fs');
 const path = require('path');
@@ -593,6 +593,8 @@ exports.postCreateBill = async (req, res) => {
     }
 
     const pdfPath = path.join(pdfDir, `bill-${bill._id}.pdf`);
+
+    // Generate PDF using original format (not template)
     await generateBillPDF(bill, pdfPath);
 
     // Send email if customer email is provided
@@ -804,11 +806,28 @@ exports.downloadBill = async (req, res) => {
       return res.redirect('/bills');
     }
 
-    const pdfPath = path.join(__dirname, '../public/bills', `bill-${bill._id}.pdf`);
+    // Get template ID from query parameter
+    const templateId = req.query.template || null;
 
-    // Check if PDF exists
-    if (!fs.existsSync(pdfPath)) {
-      // Generate PDF if it doesn't exist
+    // Create unique filename based on template
+    const templateSuffix = templateId ? `-template-${templateId}` : '';
+    const pdfPath = path.join(__dirname, '../public/bills', `bill-${bill._id}${templateSuffix}.pdf`);
+
+    // Generate PDF based on whether template is specified
+    if (templateId) {
+      // User selected a specific template - use template system
+      try {
+        console.log(`Generating PDF with template: ${templateId}`);
+        const pdfBuffer = await generateBillPDFWithTemplate(bill, templateId, req.user._id);
+        fs.writeFileSync(pdfPath, pdfBuffer);
+        console.log('PDF generated successfully with selected template');
+      } catch (error) {
+        console.error('Error generating PDF with template, falling back to default:', error);
+        await generateBillPDF(bill, pdfPath);
+      }
+    } else {
+      // No template specified - use original bill format
+      console.log('Generating PDF with original format (no template)');
       await generateBillPDF(bill, pdfPath);
     }
 
@@ -819,6 +838,19 @@ exports.downloadBill = async (req, res) => {
     // Stream the file
     const fileStream = fs.createReadStream(pdfPath);
     fileStream.pipe(res);
+
+    // Clean up template-specific files after download (keep default)
+    if (templateId) {
+      fileStream.on('end', () => {
+        setTimeout(() => {
+          if (fs.existsSync(pdfPath)) {
+            fs.unlinkSync(pdfPath);
+            console.log(`Cleaned up template-specific PDF: ${pdfPath}`);
+          }
+        }, 1000);
+      });
+    }
+
   } catch (error) {
     console.error('Download bill error:', error);
     req.flash('error', 'Failed to download bill');
@@ -1229,7 +1261,7 @@ exports.updateBill = async (req, res) => {
       }
     }
 
-    // Regenerate the PDF
+    // Regenerate the PDF using original format (not template)
     const pdfPath = path.join(__dirname, '../public/bills', `bill-${bill._id}.pdf`);
     await generateBillPDF(bill, pdfPath);
 

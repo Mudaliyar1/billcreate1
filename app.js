@@ -77,6 +77,7 @@ const inventoryRoutes = require('./routes/inventoryRoutes');
 const returnRoutes = require('./routes/returnRoutes');
 const gstRoutes = require('./routes/gstRoutes');
 const testRoutes = require('./routes/testRoutes');
+const templateRoutes = require('./routes/templateRoutes');
 
 // Use routes
 app.use('/', authRoutes);
@@ -89,6 +90,7 @@ app.use('/', inventoryRoutes);
 app.use('/', returnRoutes);
 app.use('/', gstRoutes);
 app.use('/test', testRoutes);
+app.use('/', templateRoutes);
 
 // Root route redirect to login or dashboard
 app.get('/', (req, res) => {

@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Khushi Decorators</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .editor-container {
+            height: calc(100vh - 120px);
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            height: 100%;
+            overflow-y: auto;
+        }
+        
+        .canvas-container {
+            height: 100%;
+            overflow: auto;
+            background: #e9ecef;
+            position: relative;
+        }
+        
+        .canvas {
+            width: 595px; /* A4 width */
+            height: 842px; /* A4 height */
+            background: white;
+            margin: 20px auto;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border: 1px solid #ccc;
+        }
+        
+        .element-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: grab;
+            transition: all 0.2s;
+            touch-action: none; /* Enable touch interactions */
+            user-select: none; /* Prevent text selection */
+        }
+        
+        .element-item:hover {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+        
+        .element-item.dragging {
+            opacity: 0.5;
+        }
+        
+        .canvas-element {
+            position: absolute;
+            border: 2px dashed transparent;
+            cursor: move;
+            min-height: 20px;
+            min-width: 50px;
+            padding: 5px;
+            background: rgba(33, 150, 243, 0.1);
+            transition: all 0.2s;
+            touch-action: none; /* Prevent default touch behaviors */
+            user-select: none; /* Prevent text selection during drag */
+        }
+        
+        .canvas-element:hover {
+            border-color: #2196f3;
+            background: rgba(33, 150, 243, 0.2);
+        }
+        
+        .canvas-element.selected {
+            border-color: #ff5722;
+            background: rgba(255, 87, 34, 0.1);
+        }
+        
+        .canvas-element .element-label {
+            font-size: 10px;
+            color: #666;
+            background: rgba(255,255,255,0.8);
+            padding: 2px 4px;
+            border-radius: 2px;
+            position: absolute;
+            top: -15px;
+            left: 0;
+            white-space: nowrap;
+        }
+        
+        .resize-handle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #2196f3;
+            border: 1px solid white;
+            border-radius: 50%;
+        }
+        
+        .resize-handle.se {
+            bottom: -4px;
+            right: -4px;
+            cursor: se-resize;
+        }
+
+        /* Touch-friendly resize handle */
+        @media (pointer: coarse) {
+            .resize-handle {
+                width: 16px;
+                height: 16px;
+                background: #2196f3;
+                border: 2px solid white;
+            }
+
+            .resize-handle.se {
+                bottom: -8px;
+                right: -8px;
+            }
+        }
+        
+        .properties-panel {
+            background: white;
+            border-left: 1px solid #dee2e6;
+            height: 100%;
+            overflow-y: auto;
+        }
+        
+        .toolbar {
+            background: white;
+            border-bottom: 1px solid #dee2e6;
+            padding: 10px;
+        }
+        
+        .drop-zone {
+            border: 2px dashed #ccc;
+            background: rgba(0,0,0,0.05);
+        }
+        
+        .element-preview {
+            font-size: 12px;
+            color: #666;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+
+        /* Touch feedback */
+        .canvas-element.touch-active {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+            z-index: 1000;
+        }
+
+        .element-item.touch-active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Mobile-specific improvements */
+        @media (max-width: 768px) {
+            .sidebar {
+                font-size: 14px;
+            }
+
+            .element-item {
+                padding: 12px;
+                margin: 8px 0;
+            }
+
+            .canvas-element {
+                min-height: 30px;
+                min-width: 60px;
+                padding: 8px;
+            }
+
+            .properties-panel {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Template Data -->
+    <script type="application/json" id="template-data">
+        <% if (template) { %><%- JSON.stringify(template) %><% } else { %>null<% } %>
+    </script>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-palette me-2"></i>Khushi Decorators
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/templates">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Templates
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text">Template Name:</span>
+                    <input type="text" class="form-control" id="templateName" 
+                           value="<%= template ? template.name : 'New Template' %>">
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <button class="btn btn-outline-warning me-2" onclick="forceRefresh()">
+                    <i class="fas fa-sync me-1"></i>Refresh
+                </button>
+                <button class="btn btn-outline-info me-2" onclick="debugTemplate()">
+                    <i class="fas fa-bug me-1"></i>Debug
+                </button>
+                <button class="btn btn-outline-secondary me-2" onclick="previewTemplate()">
+                    <i class="fas fa-eye me-1"></i>Preview
+                </button>
+                <button class="btn btn-success" onclick="saveTemplate()">
+                    <i class="fas fa-save me-1"></i>Save Template
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Editor -->
+    <div class="container-fluid editor-container">
+        <div class="row h-100">
+            <!-- Elements Sidebar -->
+            <div class="col-md-2 sidebar">
+                <h6 class="p-3 mb-0 border-bottom">Bill Elements</h6>
+                <div class="p-3">
+                    <div class="element-item" draggable="true" data-type="company_header">
+                        <i class="fas fa-building me-2"></i>
+                        <strong>Company Header</strong>
+                        <div class="element-preview">KHUSHI DECORATORS</div>
+                    </div>
+                    
+                    <div class="element-item" draggable="true" data-type="company_address">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        <strong>Company Address</strong>
+                        <div class="element-preview">68/1159, Shivamod Nagar...</div>
+                    </div>
+                    
+                    <div class="element-item" draggable="true" data-type="bill_number">
+                        <i class="fas fa-hashtag me-2"></i>
+                        <strong>Bill Number</strong>
+                        <div class="element-preview">INVOICE #KT-2025-0123</div>
+                    </div>
+                    
+                    <div class="element-item" draggable="true" data-type="bill_date">
+                        <i class="fas fa-calendar me-2"></i>
+                        <strong>Bill Date</strong>
+                        <div class="element-preview">Date: 20/6/2025</div>
+                    </div>
+                    
+                    <div class="element-item" draggable="true" data-type="customer_info">
+                        <i class="fas fa-user me-2"></i>
+                        <strong>Customer Info</strong>
+                        <div class="element-preview">Customer Name<br>Phone: 9876543210</div>
+                    </div>
+                    
+                    <div class="element-item" draggable="true" data-type="work_details">
+                        <i class="fas fa-briefcase me-2"></i>
+                        <strong>Work Details</strong>
+                        <div class="element-preview">Picked By: Admin</div>
+                    </div>
+                    
+                    <div class="element-item" draggable="true" data-type="items_table">
+                        <i class="fas fa-table me-2"></i>
+                        <strong>Items Table</strong>
+                        <div class="element-preview">Product | Category | Price | Qty</div>
+                    </div>
+                    
+                    <div class="element-item" draggable="true" data-type="total_amount">
+                        <i class="fas fa-calculator me-2"></i>
+                        <strong>Total Amount</strong>
+                        <div class="element-preview">Total: Rs.12,980.00</div>
+                    </div>
+                    
+                    <div class="element-item" draggable="true" data-type="payment_details">
+                        <i class="fas fa-credit-card me-2"></i>
+                        <strong>Payment Details</strong>
+                        <div class="element-preview">Payment Method: Cash</div>
+                    </div>
+                    
+                    <div class="element-item" draggable="true" data-type="qr_code">
+                        <i class="fas fa-qrcode me-2"></i>
+                        <strong>QR Code</strong>
+                        <div class="element-preview">UPI Payment QR</div>
+                    </div>
+                    
+                    <div class="element-item" draggable="true" data-type="footer">
+                        <i class="fas fa-align-center me-2"></i>
+                        <strong>Footer</strong>
+                        <div class="element-preview">Thank you for your business!</div>
+                    </div>
+                    
+                    <div class="element-item" draggable="true" data-type="custom_text">
+                        <i class="fas fa-font me-2"></i>
+                        <strong>Custom Text</strong>
+                        <div class="element-preview">Add custom text...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Canvas Area -->
+            <div class="col-md-8 canvas-container">
+                <div class="canvas" id="canvas">
+                    <!-- Elements will be added here dynamically -->
+                </div>
+            </div>
+
+            <!-- Properties Panel -->
+            <div class="col-md-2 properties-panel">
+                <h6 class="p-3 mb-0 border-bottom">Properties</h6>
+                <div class="p-3" id="propertiesPanel">
+                    <p class="text-muted">Select an element to edit its properties</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let selectedElement = null;
+        let draggedElement = null;
+        let isDragging = false;
+        let isResizing = false;
+        // Load template data from JSON script tag
+        let templateData = null;
+        try {
+            const templateScript = document.getElementById('template-data');
+            if (templateScript && templateScript.textContent.trim() !== 'null') {
+                templateData = JSON.parse(templateScript.textContent);
+            }
+        } catch (error) {
+            console.error('Error parsing template data:', error);
+        }
+        let elements = [];
+        let elementCounter = 0;
+
+        // Initialize editor
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Template Editor Initializing...');
+            console.log('Raw template data:', templateData);
+
+            initializeEditor();
+            setupEventListeners();
+
+            if (templateData) {
+                console.log('✅ Template data found:', {
+                    name: templateData.name,
+                    elementsCount: templateData.elements ? templateData.elements.length : 0,
+                    elements: templateData.elements
+                });
+
+                if (templateData.elements && templateData.elements.length > 0) {
+                    console.log('📋 Loading template with elements...');
+                    loadTemplate(templateData);
+                } else {
+                    console.log('⚠️ Template has no elements');
+                }
+            } else {
+                console.log('❌ No template data found - creating new template');
+            }
+
+            // Force a debug check after 1 second
+            setTimeout(() => {
+                console.log('🔍 Post-load debug check:');
+                console.log('- Elements array:', elements);
+                console.log('- Canvas children:', document.getElementById('canvas').children.length);
+                console.log('- Element counter:', elementCounter);
+            }, 1000);
+        });
+
+        function initializeEditor() {
+            const canvas = document.getElementById('canvas');
+            
+            // Make canvas a drop zone
+            canvas.addEventListener('dragover', handleDragOver);
+            canvas.addEventListener('drop', handleDrop);
+        }
+
+        function setupEventListeners() {
+            // Element dragging from sidebar
+            document.querySelectorAll('.element-item').forEach(item => {
+                // Mouse events
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', handleDragEnd);
+
+                // Touch events for mobile/tablet
+                item.addEventListener('touchstart', handleTouchStart, { passive: false });
+                item.addEventListener('touchmove', handleTouchMove, { passive: false });
+                item.addEventListener('touchend', handleTouchEnd, { passive: false });
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedElement = e.target.closest('.element-item');
+            draggedElement.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', draggedElement.dataset.type);
+        }
+
+        function handleDragEnd(e) {
+            if (draggedElement) {
+                draggedElement.classList.remove('dragging');
+                draggedElement = null;
+            }
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drop-zone');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drop-zone');
+
+            const elementType = e.dataTransfer.getData('text/plain');
+            const canvas = document.getElementById('canvas');
+            const rect = canvas.getBoundingClientRect();
+
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            createElement(elementType, x, y);
+        }
+
+        // Touch event handlers for sidebar elements
+        let touchDraggedElement = null;
+        let touchStartPos = { x: 0, y: 0 };
+        let isDraggingTouch = false;
+
+        function handleTouchStart(e) {
+            touchDraggedElement = e.target.closest('.element-item');
+            if (touchDraggedElement) {
+                const touch = e.touches[0];
+                touchStartPos = { x: touch.clientX, y: touch.clientY };
+                touchDraggedElement.classList.add('dragging', 'touch-active');
+
+                // Create visual feedback
+                createTouchDragPreview(touchDraggedElement, touch.clientX, touch.clientY);
+
+                // Haptic feedback if available
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+            }
+        }
+
+        function handleTouchMove(e) {
+            if (!touchDraggedElement) return;
+
+            e.preventDefault(); // Prevent scrolling
+            const touch = e.touches[0];
+
+            // Update drag preview position
+            updateTouchDragPreview(touch.clientX, touch.clientY);
+
+            // Check if over canvas
+            const canvas = document.getElementById('canvas');
+            const rect = canvas.getBoundingClientRect();
+
+            if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+                touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                canvas.classList.add('drop-zone');
+                isDraggingTouch = true;
+            } else {
+                canvas.classList.remove('drop-zone');
+                isDraggingTouch = false;
+            }
+        }
+
+        function handleTouchEnd(e) {
+            if (!touchDraggedElement) return;
+
+            const canvas = document.getElementById('canvas');
+            canvas.classList.remove('drop-zone');
+
+            if (isDraggingTouch) {
+                const touch = e.changedTouches[0];
+                const rect = canvas.getBoundingClientRect();
+
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+
+                const elementType = touchDraggedElement.dataset.type;
+                createElement(elementType, x, y);
+            }
+
+            // Clean up
+            touchDraggedElement.classList.remove('dragging', 'touch-active');
+            removeTouchDragPreview();
+            touchDraggedElement = null;
+            isDraggingTouch = false;
+        }
+
+        // Touch drag preview functions
+        let touchDragPreview = null;
+
+        function createTouchDragPreview(element, x, y) {
+            touchDragPreview = element.cloneNode(true);
+            touchDragPreview.style.position = 'fixed';
+            touchDragPreview.style.left = x + 'px';
+            touchDragPreview.style.top = y + 'px';
+            touchDragPreview.style.opacity = '0.7';
+            touchDragPreview.style.transform = 'scale(0.9)';
+            touchDragPreview.style.pointerEvents = 'none';
+            touchDragPreview.style.zIndex = '9999';
+            touchDragPreview.style.backgroundColor = '#e3f2fd';
+            touchDragPreview.style.border = '2px solid #2196f3';
+            document.body.appendChild(touchDragPreview);
+        }
+
+        function updateTouchDragPreview(x, y) {
+            if (touchDragPreview) {
+                touchDragPreview.style.left = (x - 50) + 'px';
+                touchDragPreview.style.top = (y - 25) + 'px';
+            }
+        }
+
+        function removeTouchDragPreview() {
+            if (touchDragPreview) {
+                document.body.removeChild(touchDragPreview);
+                touchDragPreview = null;
+            }
+        }
+
+        function createElement(type, x, y) {
+            const elementId = `element_${++elementCounter}`;
+            const element = {
+                id: elementId,
+                type: type,
+                label: getElementLabel(type),
+                position: { x: Math.max(0, x - 50), y: Math.max(0, y - 25) },
+                size: { width: 200, height: 50 },
+                style: getDefaultStyle(type),
+                visible: true,
+                customText: '',
+                order: elements.length + 1
+            };
+            
+            elements.push(element);
+            renderElement(element);
+        }
+
+        function getElementLabel(type) {
+            const labels = {
+                'company_header': 'Company Header',
+                'company_address': 'Company Address',
+                'bill_number': 'Bill Number',
+                'bill_date': 'Bill Date',
+                'customer_info': 'Customer Information',
+                'work_details': 'Work Details',
+                'items_table': 'Items Table',
+                'total_amount': 'Total Amount',
+                'payment_details': 'Payment Details',
+                'qr_code': 'QR Code',
+                'footer': 'Footer',
+                'custom_text': 'Custom Text'
+            };
+            return labels[type] || 'Unknown Element';
+        }
+
+        function getDefaultStyle(type) {
+            const styles = {
+                'company_header': { fontSize: 24, fontWeight: 'bold', textAlign: 'center' },
+                'company_address': { fontSize: 10, textAlign: 'center' },
+                'bill_number': { fontSize: 14, fontWeight: 'bold' },
+                'bill_date': { fontSize: 12 },
+                'customer_info': { fontSize: 12 },
+                'work_details': { fontSize: 12 },
+                'items_table': { fontSize: 10 },
+                'total_amount': { fontSize: 12, fontWeight: 'bold' },
+                'payment_details': { fontSize: 10 },
+                'footer': { fontSize: 10, textAlign: 'center' },
+                'custom_text': { fontSize: 12 }
+            };
+            
+            return {
+                fontSize: 12,
+                fontWeight: 'normal',
+                textAlign: 'left',
+                color: '#000000',
+                backgroundColor: 'transparent',
+                borderWidth: 0,
+                borderColor: '#000000',
+                ...styles[type]
+            };
+        }
+
+        function renderElement(element) {
+            const canvas = document.getElementById('canvas');
+            const div = document.createElement('div');
+            
+            div.className = 'canvas-element';
+            div.id = element.id;
+            div.style.left = element.position.x + 'px';
+            div.style.top = element.position.y + 'px';
+            div.style.width = element.size.width + 'px';
+            div.style.height = element.size.height + 'px';
+            div.style.fontSize = element.style.fontSize + 'px';
+            div.style.fontWeight = element.style.fontWeight;
+            div.style.textAlign = element.style.textAlign;
+            div.style.color = element.style.color;
+            div.style.backgroundColor = element.style.backgroundColor;
+            
+            if (element.style.borderWidth > 0) {
+                div.style.border = `${element.style.borderWidth}px solid ${element.style.borderColor}`;
+            }
+            
+            div.innerHTML = `
+                <div class="element-label">${element.label}</div>
+                ${getElementPreview(element)}
+                <div class="resize-handle se"></div>
+            `;
+            
+            // Add event listeners
+            div.addEventListener('click', () => selectElement(element.id));
+            div.addEventListener('mousedown', startDrag);
+
+            // Touch events for canvas elements
+            div.addEventListener('touchstart', startTouchDrag, { passive: false });
+
+            const resizeHandle = div.querySelector('.resize-handle');
+            resizeHandle.addEventListener('mousedown', startResize);
+            resizeHandle.addEventListener('touchstart', startTouchResize, { passive: false });
+            
+            canvas.appendChild(div);
+        }
+
+        function getElementPreview(element) {
+            const previews = {
+                'company_header': 'KHUSHI DECORATORS',
+                'company_address': '68/1159, Shivamod Nagar, Nr Nagurewl Hanuman Temple...',
+                'bill_number': 'INVOICE #KT-2025-0123',
+                'bill_date': 'Date: 20/6/2025',
+                'customer_info': 'Customer Name<br>Phone: 9876543210<br>Place: Location',
+                'work_details': 'Picked By: Admin',
+                'items_table': 'ITEM | CATEGORY | PRICE | QTY | AMOUNT',
+                'total_amount': 'TOTAL AMOUNT: Rs.12,980.00',
+                'payment_details': 'Payment Method: Cash<br>Amount Paid: Rs.12,980.00',
+                'qr_code': '[QR CODE]',
+                'footer': 'Thank you for your business!',
+                'custom_text': element.customText || 'Custom text here...'
+            };
+            return previews[element.type] || 'Element content';
+        }
+
+        function selectElement(elementId) {
+            // Remove previous selection
+            document.querySelectorAll('.canvas-element').forEach(el => {
+                el.classList.remove('selected');
+            });
+
+            // Select new element
+            const elementDiv = document.getElementById(elementId);
+            elementDiv.classList.add('selected');
+
+            selectedElement = elements.find(el => el.id === elementId);
+            showProperties(selectedElement);
+        }
+
+        function showProperties(element) {
+            const panel = document.getElementById('propertiesPanel');
+
+            panel.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label">Element Type</label>
+                    <input type="text" class="form-control" value="${element.label}" readonly>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label">X Position</label>
+                        <input type="number" class="form-control" value="${element.position.x}"
+                               onchange="updateElementProperty('position.x', this.value)">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Y Position</label>
+                        <input type="number" class="form-control" value="${element.position.y}"
+                               onchange="updateElementProperty('position.y', this.value)">
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Width</label>
+                        <input type="number" class="form-control" value="${element.size.width}"
+                               onchange="updateElementProperty('size.width', this.value)">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Height</label>
+                        <input type="number" class="form-control" value="${element.size.height}"
+                               onchange="updateElementProperty('size.height', this.value)">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Font Size</label>
+                    <input type="number" class="form-control" value="${element.style.fontSize}"
+                           onchange="updateElementProperty('style.fontSize', this.value)">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Font Weight</label>
+                    <select class="form-control" onchange="updateElementProperty('style.fontWeight', this.value)">
+                        <option value="normal" ${element.style.fontWeight === 'normal' ? 'selected' : ''}>Normal</option>
+                        <option value="bold" ${element.style.fontWeight === 'bold' ? 'selected' : ''}>Bold</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Text Align</label>
+                    <select class="form-control" onchange="updateElementProperty('style.textAlign', this.value)">
+                        <option value="left" ${element.style.textAlign === 'left' ? 'selected' : ''}>Left</option>
+                        <option value="center" ${element.style.textAlign === 'center' ? 'selected' : ''}>Center</option>
+                        <option value="right" ${element.style.textAlign === 'right' ? 'selected' : ''}>Right</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Text Color</label>
+                    <input type="color" class="form-control" value="${element.style.color}"
+                           onchange="updateElementProperty('style.color', this.value)">
+                </div>
+
+                ${element.type === 'custom_text' ? `
+                    <div class="mb-3">
+                        <label class="form-label">Custom Text</label>
+                        <textarea class="form-control" rows="3"
+                                  onchange="updateElementProperty('customText', this.value)">${element.customText}</textarea>
+                    </div>
+                ` : ''}
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" ${element.visible ? 'checked' : ''}
+                               onchange="updateElementProperty('visible', this.checked)">
+                        <label class="form-check-label">Visible</label>
+                    </div>
+                </div>
+
+                <button class="btn btn-danger btn-sm w-100" onclick="deleteElement()">
+                    <i class="fas fa-trash me-1"></i>Delete Element
+                </button>
+            `;
+        }
+
+        function updateElementProperty(property, value) {
+            if (!selectedElement) return;
+
+            const keys = property.split('.');
+            let obj = selectedElement;
+
+            for (let i = 0; i < keys.length - 1; i++) {
+                obj = obj[keys[i]];
+            }
+
+            obj[keys[keys.length - 1]] = value;
+
+            // Re-render the element
+            const elementDiv = document.getElementById(selectedElement.id);
+            if (elementDiv) {
+                elementDiv.remove();
+                renderElement(selectedElement);
+                selectElement(selectedElement.id);
+            }
+        }
+
+        function deleteElement() {
+            if (!selectedElement) return;
+
+            if (confirm('Delete this element?')) {
+                const elementDiv = document.getElementById(selectedElement.id);
+                elementDiv.remove();
+
+                elements = elements.filter(el => el.id !== selectedElement.id);
+                selectedElement = null;
+
+                document.getElementById('propertiesPanel').innerHTML =
+                    '<p class="text-muted">Select an element to edit its properties</p>';
+            }
+        }
+
+        function loadTemplate(template) {
+            console.log('Loading template:', template);
+
+            elements = template.elements || [];
+            const canvas = document.getElementById('canvas');
+            canvas.innerHTML = '';
+
+            // Reset element counter to avoid ID conflicts
+            if (elements.length > 0) {
+                // Extract numbers from element IDs and find the maximum
+                const elementNumbers = elements.map(el => {
+                    const match = el.id.match(/\d+/);
+                    return match ? parseInt(match[0]) : 0;
+                });
+                elementCounter = Math.max(...elementNumbers, 0);
+            }
+
+            console.log(`Loading ${elements.length} elements, elementCounter set to ${elementCounter}`);
+
+            // Render each element on the canvas
+            elements.forEach((element, index) => {
+                console.log(`Rendering element ${index + 1}:`, element);
+                try {
+                    renderElement(element);
+                } catch (error) {
+                    console.error(`Error rendering element ${element.id}:`, error);
+                }
+            });
+
+            document.getElementById('templateName').value = template.name;
+            console.log(`✅ Template loaded successfully with ${elements.length} elements`);
+
+            // Debug: Check canvas content after loading
+            setTimeout(() => {
+                const canvasChildren = document.getElementById('canvas').children;
+                console.log(`Canvas now has ${canvasChildren.length} child elements`);
+            }, 100);
+        }
+
+        async function saveTemplate() {
+            const name = document.getElementById('templateName').value.trim();
+
+            if (!name) {
+                alert('Please enter a template name');
+                return;
+            }
+
+            const saveData = {
+                templateId: templateData ? templateData._id : null,
+                name: name,
+                description: '',
+                pageSettings: {
+                    width: 595,
+                    height: 842,
+                    margin: { top: 40, bottom: 40, left: 40, right: 40 }
+                },
+                elements: elements,
+                isDefault: false
+            };
+
+            try {
+                const response = await fetch('/templates/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(templateData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Template saved successfully!');
+                    window.location.href = '/templates';
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error saving template');
+                console.error(error);
+            }
+        }
+
+        function previewTemplate() {
+            console.log('Preview - Current elements:', elements);
+
+            // Open preview in new window
+            const previewWindow = window.open('', '_blank', 'width=800,height=600');
+            previewWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Template Preview</title>
+                        <style>
+                            body { margin: 20px; font-family: Arial, sans-serif; }
+                            .preview-canvas {
+                                width: 595px;
+                                height: 842px;
+                                border: 1px solid #ccc;
+                                position: relative;
+                                background: white;
+                                margin: 0 auto;
+                            }
+                            .preview-element { position: absolute; }
+                        </style>
+                    </head>
+                    <body>
+                        <h3>Template Preview: ${document.getElementById('templateName').value}</h3>
+                        <div class="preview-canvas">
+                            ${elements.filter(el => el.visible).map(el => `
+                                <div class="preview-element" style="
+                                    left: ${el.position.x}px;
+                                    top: ${el.position.y}px;
+                                    width: ${el.size.width}px;
+                                    height: ${el.size.height}px;
+                                    font-size: ${el.style.fontSize}px;
+                                    font-weight: ${el.style.fontWeight};
+                                    text-align: ${el.style.textAlign};
+                                    color: ${el.style.color};
+                                    background-color: ${el.style.backgroundColor};
+                                    ${el.style.borderWidth > 0 ? `border: ${el.style.borderWidth}px solid ${el.style.borderColor};` : ''}
+                                ">
+                                    ${getElementPreview(el)}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </body>
+                </html>
+            `);
+        }
+
+        // Debug function to test template loading
+        function debugTemplate() {
+            console.log('=== TEMPLATE DEBUG ===');
+            console.log('Template Data:', templateData);
+            console.log('Current Elements:', elements);
+            console.log('Element Counter:', elementCounter);
+            console.log('Canvas Children:', document.getElementById('canvas').children.length);
+
+            // Force reload template if data exists
+            if (templateData && templateData.elements) {
+                console.log('🔄 Force reloading template...');
+                loadTemplate(templateData);
+            }
+        }
+
+        // Force refresh function for troubleshooting
+        function forceRefresh() {
+            console.log('🔄 Force refreshing template editor...');
+
+            // Clear canvas
+            document.getElementById('canvas').innerHTML = '';
+            elements = [];
+            selectedElement = null;
+
+            // Reload template if available
+            if (templateData && templateData.elements) {
+                console.log('📋 Reloading template data...');
+                loadTemplate(templateData);
+            } else {
+                console.log('❌ No template data to reload');
+            }
+        }
+
+        // Drag and resize functionality
+        let dragStartX, dragStartY, elementStartX, elementStartY;
+        let resizeStartX, resizeStartY, elementStartWidth, elementStartHeight;
+        let isTouchDragging = false;
+        let isTouchResizing = false;
+
+        function startDrag(e) {
+            if (e.target.classList.contains('resize-handle')) return;
+
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+
+            const element = elements.find(el => el.id === e.currentTarget.id);
+            elementStartX = element.position.x;
+            elementStartY = element.position.y;
+
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+
+            e.preventDefault();
+        }
+
+        function drag(e) {
+            if (!isDragging || !selectedElement) return;
+
+            const deltaX = e.clientX - dragStartX;
+            const deltaY = e.clientY - dragStartY;
+
+            selectedElement.position.x = Math.max(0, elementStartX + deltaX);
+            selectedElement.position.y = Math.max(0, elementStartY + deltaY);
+
+            const elementDiv = document.getElementById(selectedElement.id);
+            elementDiv.style.left = selectedElement.position.x + 'px';
+            elementDiv.style.top = selectedElement.position.y + 'px';
+
+            showProperties(selectedElement);
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        function startResize(e) {
+            isResizing = true;
+            resizeStartX = e.clientX;
+            resizeStartY = e.clientY;
+
+            const element = elements.find(el => el.id === e.target.closest('.canvas-element').id);
+            elementStartWidth = element.size.width;
+            elementStartHeight = element.size.height;
+
+            document.addEventListener('mousemove', resize);
+            document.addEventListener('mouseup', stopResize);
+
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function resize(e) {
+            if (!isResizing || !selectedElement) return;
+
+            const deltaX = e.clientX - resizeStartX;
+            const deltaY = e.clientY - resizeStartY;
+
+            selectedElement.size.width = Math.max(50, elementStartWidth + deltaX);
+            selectedElement.size.height = Math.max(20, elementStartHeight + deltaY);
+
+            const elementDiv = document.getElementById(selectedElement.id);
+            elementDiv.style.width = selectedElement.size.width + 'px';
+            elementDiv.style.height = selectedElement.size.height + 'px';
+
+            showProperties(selectedElement);
+        }
+
+        function stopResize() {
+            isResizing = false;
+            document.removeEventListener('mousemove', resize);
+            document.removeEventListener('mouseup', stopResize);
+        }
+
+        // Touch drag functions for canvas elements
+        function startTouchDrag(e) {
+            if (e.target.classList.contains('resize-handle')) return;
+
+            e.preventDefault();
+            isTouchDragging = true;
+
+            const touch = e.touches[0];
+            dragStartX = touch.clientX;
+            dragStartY = touch.clientY;
+
+            const element = elements.find(el => el.id === e.currentTarget.id);
+            if (element) {
+                elementStartX = element.position.x;
+                elementStartY = element.position.y;
+                selectElement(element.id);
+
+                // Add touch feedback
+                e.currentTarget.classList.add('touch-active');
+
+                // Haptic feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(30);
+                }
+            }
+
+            document.addEventListener('touchmove', touchDrag, { passive: false });
+            document.addEventListener('touchend', stopTouchDrag, { passive: false });
+        }
+
+        function touchDrag(e) {
+            if (!isTouchDragging || !selectedElement) return;
+
+            e.preventDefault();
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - dragStartX;
+            const deltaY = touch.clientY - dragStartY;
+
+            selectedElement.position.x = Math.max(0, elementStartX + deltaX);
+            selectedElement.position.y = Math.max(0, elementStartY + deltaY);
+
+            const elementDiv = document.getElementById(selectedElement.id);
+            elementDiv.style.left = selectedElement.position.x + 'px';
+            elementDiv.style.top = selectedElement.position.y + 'px';
+
+            showProperties(selectedElement);
+        }
+
+        function stopTouchDrag() {
+            isTouchDragging = false;
+
+            // Remove touch feedback
+            document.querySelectorAll('.canvas-element.touch-active').forEach(el => {
+                el.classList.remove('touch-active');
+            });
+
+            document.removeEventListener('touchmove', touchDrag);
+            document.removeEventListener('touchend', stopTouchDrag);
+        }
+
+        // Touch resize functions
+        function startTouchResize(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            isTouchResizing = true;
+
+            const touch = e.touches[0];
+            resizeStartX = touch.clientX;
+            resizeStartY = touch.clientY;
+
+            const element = elements.find(el => el.id === e.target.closest('.canvas-element').id);
+            if (element) {
+                elementStartWidth = element.size.width;
+                elementStartHeight = element.size.height;
+                selectElement(element.id);
+            }
+
+            document.addEventListener('touchmove', touchResize, { passive: false });
+            document.addEventListener('touchend', stopTouchResize, { passive: false });
+        }
+
+        function touchResize(e) {
+            if (!isTouchResizing || !selectedElement) return;
+
+            e.preventDefault();
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - resizeStartX;
+            const deltaY = touch.clientY - resizeStartY;
+
+            selectedElement.size.width = Math.max(50, elementStartWidth + deltaX);
+            selectedElement.size.height = Math.max(20, elementStartHeight + deltaY);
+
+            const elementDiv = document.getElementById(selectedElement.id);
+            elementDiv.style.width = selectedElement.size.width + 'px';
+            elementDiv.style.height = selectedElement.size.height + 'px';
+
+            showProperties(selectedElement);
+        }
+
+        function stopTouchResize() {
+            isTouchResizing = false;
+            document.removeEventListener('touchmove', touchResize);
+            document.removeEventListener('touchend', stopTouchResize);
+        }
+    </script>
+</body>
+</html>
