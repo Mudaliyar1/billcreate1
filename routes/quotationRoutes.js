@@ -27,5 +27,6 @@ router.get('/quotation-products/:id/delete', quotationProductController.deleteQu
 
 // API routes for quotation products
 router.get('/api/quotation-products/all', quotationProductController.getAllQuotationProducts);
+router.post('/api/quotation-products/seed', quotationProductController.seedTestProducts);
 
 module.exports = router;

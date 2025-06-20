@@ -137,7 +137,7 @@
                       <th>Product</th>
                       <th>Category</th>
                       <th>Unit Type</th>
-                      <th>Quantity/Measurement</th>
+                      <th>Measurement</th>
                       <th>Price</th>
                       <th>Amount</th>
                     </tr>
@@ -148,17 +148,15 @@
                         <td><%= item.name %></td>
                         <td><%= item.category %></td>
                         <td>
-                          <% if (item.unitType === 'piece') { %>
-                            Piece
-                          <% } else if (item.unitType === 'ft') { %>
+                          <% if (item.unitType === 'ft') { %>
                             Feet
                           <% } else if (item.unitType === 'rft') { %>
                             Running Feet
                           <% } %>
                         </td>
                         <td>
-                          <% if (item.unitType === 'piece') { %>
-                            <%= item.quantity %> pcs
+                          <% if (item.unitType === 'ft') { %>
+                            <%= item.feet %> ft
                           <% } else if (item.unitType === 'ft') { %>
                             <%= item.feet %> ft
                           <% } else if (item.unitType === 'rft') { %>
@@ -166,9 +164,7 @@
                           <% } %>
                         </td>
                         <td>
-                          <% if (item.unitType === 'piece') { %>
-                            ₹<%= (item.price / item.quantity).toFixed(2) %> per piece
-                          <% } else if (item.unitType === 'ft') { %>
+                          <% if (item.unitType === 'ft') { %>
                             ₹<%= (item.price / item.feet).toFixed(2) %> per ft
                           <% } else if (item.unitType === 'rft') { %>
                             ₹<%= (item.price / item.runningFeet).toFixed(2) %> per rft

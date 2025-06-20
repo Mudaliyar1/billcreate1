@@ -14,6 +14,9 @@
           <a href="/quotation-products/create" class="btn btn-sm btn-primary">
             <i class="fas fa-plus"></i> Add New Product
           </a>
+          <button class="btn btn-sm btn-secondary ms-2" onclick="seedTestProducts()">
+            <i class="fas fa-database"></i> Seed Test Data
+          </button>
         </div>
       </div>
 
@@ -45,12 +48,9 @@
                     <thead>
                       <tr>
                         <th>Name</th>
-                        <th>Category</th>
                         <th>Unit Type</th>
-                        <th>Piece Price</th>
                         <th>Feet Price</th>
                         <th>Running Feet Price</th>
-                        <th>Quantity</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
@@ -59,22 +59,10 @@
                         <tr>
                           <td><strong><%= product.name %></strong></td>
                           <td>
-                            <span class="badge bg-secondary"><%= product.category %></span>
-                          </td>
-                          <td>
-                            <% if (product.unitType === 'piece') { %>
-                              <span class="badge bg-primary">Piece</span>
-                            <% } else if (product.unitType === 'ft') { %>
+                            <% if (product.unitType === 'ft') { %>
                               <span class="badge bg-info">Feet</span>
                             <% } else if (product.unitType === 'rft') { %>
                               <span class="badge bg-warning">Running Feet</span>
-                            <% } %>
-                          </td>
-                          <td>
-                            <% if (product.price > 0) { %>
-                              ₹<%= product.price.toFixed(2) %>
-                            <% } else { %>
-                              <span class="text-muted">-</span>
                             <% } %>
                           </td>
                           <td>
@@ -89,15 +77,6 @@
                               ₹<%= product.pricePerRft.toFixed(2) %>/rft
                             <% } else { %>
                               <span class="text-muted">-</span>
-                            <% } %>
-                          </td>
-                          <td>
-                            <% if (product.quantity <= 5 && product.quantity > 0) { %>
-                              <span class="text-warning"><%= product.quantity %> (Low Stock)</span>
-                            <% } else if (product.quantity === 0) { %>
-                              <span class="text-danger">Out of Stock</span>
-                            <% } else { %>
-                              <%= product.quantity %>
                             <% } %>
                           </td>
                           <td>
@@ -134,5 +113,34 @@
 </div>
 
 
+
+<script>
+async function seedTestProducts() {
+  if (!confirm('This will delete all existing quotation products and create test data. Are you sure?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/quotation-products/seed', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      alert(`Success! Created ${result.products.length} test products.`);
+      location.reload();
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Seed error:', error);
+    alert('Error seeding test products: ' + error.message);
+  }
+}
+</script>
 
 <%- include('../partials/footer') %>

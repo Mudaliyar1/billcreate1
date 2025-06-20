@@ -322,18 +322,14 @@ const addProductRow = () => {
     <div class="col-md-1 mb-2">
       <label class="form-label">Unit Type</label>
       <select class="form-select unit-type-select" name="unitTypes[]" required onchange="toggleUnitFields(this)">
-        <option value="piece">Piece</option>
-        <option value="ft">Feet</option>
+        <option value="ft" selected>Feet</option>
         <option value="rft">Running Feet</option>
       </select>
     </div>
 
-    <div class="col-md-1 mb-2 quantity-field">
-      <label class="form-label">Quantity</label>
-      <input type="number" class="form-control quantity-input" name="quantities[]" min="1" value="1" required onchange="updateAmountForRow(this)" oninput="updateAmountForRow(this)">
-    </div>
 
-    <div class="col-md-1 mb-2 feet-field" style="display: none;">
+
+    <div class="col-md-1 mb-2 feet-field" style="display: block;">
       <label class="form-label">Feet</label>
       <input type="number" class="form-control feet-input" name="feet[]" min="0" step="0.01" value="0" onchange="updateAmountForRow(this)" oninput="updateAmountForRow(this)">
     </div>
@@ -379,10 +375,23 @@ const addProductRow = () => {
       products.forEach(product => {
         const option = document.createElement('option');
         option.value = product._id;
-        option.textContent = `${product.name} - Rs.${product.price.toFixed(2)}`;
+
+        // Show the correct price based on unit type
+        let displayPrice = 'Rs.0.00';
+        if (product.unitType === 'ft' && product.pricePerFt > 0) {
+          displayPrice = `Rs.${product.pricePerFt.toFixed(2)}/ft`;
+        } else if (product.unitType === 'rft' && product.pricePerRft > 0) {
+          displayPrice = `Rs.${product.pricePerRft.toFixed(2)}/rft`;
+        }
+
+        option.textContent = `${product.name} - ${displayPrice}`;
         option.dataset.price = product.price;
         option.dataset.pricePerFt = product.pricePerFt || 0;
         option.dataset.pricePerRft = product.pricePerRft || 0;
+        option.dataset.unitType = product.unitType;
+
+        console.log(`Product: ${product.name}, Unit: ${product.unitType}, PricePerFt: ${product.pricePerFt}, PricePerRft: ${product.pricePerRft}`);
+
         productSelect.appendChild(option);
       });
 
@@ -410,21 +419,16 @@ addProductRow();
 // Function to toggle unit fields based on unit type
 function toggleUnitFields(selectElement) {
   const row = selectElement.closest('.product-row');
-  const quantityField = row.querySelector('.quantity-field');
   const feetField = row.querySelector('.feet-field');
   const rftField = row.querySelector('.rft-field');
   const unitType = selectElement.value;
 
   // Hide all fields first
-  quantityField.style.display = 'none';
   feetField.style.display = 'none';
   rftField.style.display = 'none';
 
   // Show relevant field based on unit type
   switch (unitType) {
-    case 'piece':
-      quantityField.style.display = 'block';
-      break;
     case 'ft':
       feetField.style.display = 'block';
       break;
@@ -442,7 +446,6 @@ function updateAmountForRow(element) {
   const row = element.closest('.product-row');
   const productSelect = row.querySelector('.product-select');
   const unitTypeSelect = row.querySelector('.unit-type-select');
-  const quantityInput = row.querySelector('.quantity-input');
   const feetInput = row.querySelector('.feet-input');
   const rftInput = row.querySelector('.rft-input');
   const amountInput = row.querySelector('.product-amount');
@@ -455,21 +458,26 @@ function updateAmountForRow(element) {
   const unitType = unitTypeSelect.value;
   let amount = 0;
 
+  console.log('Calculating amount for:', {
+    unitType,
+    pricePerFt: selectedOption.dataset.pricePerFt,
+    pricePerRft: selectedOption.dataset.pricePerRft,
+    feetValue: feetInput ? feetInput.value : 'N/A',
+    rftValue: rftInput ? rftInput.value : 'N/A'
+  });
+
   switch (unitType) {
-    case 'piece':
-      const price = parseFloat(selectedOption.dataset.price) || 0;
-      const quantity = parseInt(quantityInput.value) || 0;
-      amount = price * quantity;
-      break;
     case 'ft':
       const pricePerFt = parseFloat(selectedOption.dataset.pricePerFt) || 0;
       const feet = parseFloat(feetInput.value) || 0;
       amount = pricePerFt * feet;
+      console.log(`Feet calculation: ${pricePerFt} × ${feet} = ${amount}`);
       break;
     case 'rft':
       const pricePerRft = parseFloat(selectedOption.dataset.pricePerRft) || 0;
       const rft = parseFloat(rftInput.value) || 0;
       amount = pricePerRft * rft;
+      console.log(`RFT calculation: ${pricePerRft} × ${rft} = ${amount}`);
       break;
   }
 
@@ -479,6 +487,18 @@ function updateAmountForRow(element) {
 
 // Function to update amount when product changes
 function updateAmountForProductSelect(selectElement) {
+  const row = selectElement.closest('.product-row');
+  const unitTypeSelect = row.querySelector('.unit-type-select');
+  const selectedOption = selectElement.querySelector(`option[value="${selectElement.value}"]`);
+
+  if (selectedOption && selectedOption.dataset.unitType) {
+    // Set unit type based on product's unit type
+    unitTypeSelect.value = selectedOption.dataset.unitType;
+
+    // Toggle unit fields
+    toggleUnitFields(unitTypeSelect);
+  }
+
   updateAmountForRow(selectElement);
 }
 

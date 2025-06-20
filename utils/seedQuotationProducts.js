@@ -4,120 +4,136 @@ const connectDB = require('../config/db');
 
 // Sample quotation products data
 const sampleQuotationProducts = [
-  // Board category
+  // Gypsum products (feet-based)
   {
-    name: 'Plywood Sheet 8x4',
-    price: 2500,
-    pricePerFt: 0,
+    name: 'Gypsum ceiling (khushbu)',
+    price: 0,
+    pricePerFt: 85,
     pricePerRft: 0,
-    category: 'Board',
-    unitType: 'piece',
-    quantity: 50
+    unitType: 'ft'
   },
   {
-    name: 'MDF Board',
+    name: 'Gypsum ceiling gyblock (Expert)',
+    price: 0,
+    pricePerFt: 95,
+    pricePerRft: 0,
+    unitType: 'ft'
+  },
+  {
+    name: 'Gypsum ceiling indraprastha',
+    price: 0,
+    pricePerFt: 75,
+    pricePerRft: 0,
+    unitType: 'ft'
+  },
+  {
+    name: 'Gypsum ceiling gyproc',
+    price: 0,
+    pricePerFt: 90,
+    pricePerRft: 0,
+    unitType: 'ft'
+  },
+  {
+    name: 'Gypsum running',
     price: 0,
     pricePerFt: 45,
     pricePerRft: 0,
-    category: 'Board',
-    unitType: 'ft',
-    quantity: 200
+    unitType: 'ft'
   },
   {
-    name: 'Particle Board',
-    price: 1800,
-    pricePerFt: 0,
+    name: 'Gypsum running (expert)',
+    price: 0,
+    pricePerFt: 55,
     pricePerRft: 0,
-    category: 'Board',
-    unitType: 'piece',
-    quantity: 30
+    unitType: 'ft'
+  },
+  {
+    name: 'Gypsum running (gypframe)',
+    price: 0,
+    pricePerFt: 50,
+    pricePerRft: 0,
+    unitType: 'ft'
+  },
+  {
+    name: 'Gypsum running (khushbu)',
+    price: 0,
+    pricePerFt: 48,
+    pricePerRft: 0,
+    unitType: 'ft'
   },
 
-  // Chanel category
+  // Running feet products
+  {
+    name: 'Hint ceiling (2×2)',
+    price: 0,
+    pricePerFt: 0,
+    pricePerRft: 120,
+    unitType: 'rft'
+  },
+  {
+    name: 'P.V.C ceiling',
+    price: 0,
+    pricePerFt: 0,
+    pricePerRft: 85,
+    unitType: 'rft'
+  },
   {
     name: 'Aluminum Channel',
     price: 0,
     pricePerFt: 0,
-    pricePerRft: 120,
-    category: 'Chanel',
-    unitType: 'rft',
-    quantity: 500
+    pricePerRft: 110,
+    unitType: 'rft'
   },
   {
     name: 'Steel Channel',
     price: 0,
     pricePerFt: 0,
-    pricePerRft: 85,
-    category: 'Chanel',
-    unitType: 'rft',
-    quantity: 300
+    pricePerRft: 95,
+    unitType: 'rft'
   },
   {
     name: 'PVC Channel',
     price: 0,
     pricePerFt: 0,
-    pricePerRft: 65,
-    category: 'Chanel',
-    unitType: 'rft',
-    quantity: 400
-  },
-
-  // Hardware category
-  {
-    name: 'Door Handle Set',
-    price: 450,
-    pricePerFt: 0,
-    pricePerRft: 0,
-    category: 'Hardware',
-    unitType: 'piece',
-    quantity: 25
-  },
-  {
-    name: 'Cabinet Hinges',
-    price: 35,
-    pricePerFt: 0,
-    pricePerRft: 0,
-    category: 'Hardware',
-    unitType: 'piece',
-    quantity: 100
-  },
-  {
-    name: 'Drawer Slides',
-    price: 180,
-    pricePerFt: 0,
-    pricePerRft: 0,
-    category: 'Hardware',
-    unitType: 'piece',
-    quantity: 40
-  },
-
-  // Bori category
-  {
-    name: 'Decorative Bori Strip',
-    price: 0,
-    pricePerFt: 25,
-    pricePerRft: 0,
-    category: 'Bori',
-    unitType: 'ft',
-    quantity: 150
+    pricePerRft: 75,
+    unitType: 'rft'
   },
   {
     name: 'Edge Banding',
     price: 0,
     pricePerFt: 0,
-    pricePerRft: 15,
-    category: 'Bori',
-    unitType: 'rft',
-    quantity: 800
+    pricePerRft: 25,
+    unitType: 'rft'
+  },
+
+  // More feet-based products
+  {
+    name: 'MDF Board',
+    price: 0,
+    pricePerFt: 65,
+    pricePerRft: 0,
+    unitType: 'ft'
+  },
+  {
+    name: 'Decorative Bori Strip',
+    price: 0,
+    pricePerFt: 35,
+    pricePerRft: 0,
+    unitType: 'ft'
   },
   {
     name: 'Veneer Strip',
     price: 0,
-    pricePerFt: 35,
+    pricePerFt: 45,
     pricePerRft: 0,
-    category: 'Bori',
-    unitType: 'ft',
-    quantity: 200
+    unitType: 'ft'
+  },
+  {
+    name: 'Wooden Molding',
+    price: 0,
+    pricePerFt: 55,
+    pricePerRft: 0,
+    unitType: 'ft'
   }
 ];
 
@@ -135,7 +151,7 @@ async function seedQuotationProducts() {
     console.log(`Created ${createdProducts.length} quotation products:`);
     
     createdProducts.forEach(product => {
-      console.log(`- ${product.name} (${product.category}) - ${product.unitType}`);
+      console.log(`- ${product.name} - ${product.unitType}`);
     });
 
     console.log('Quotation products seeded successfully!');

@@ -18,10 +18,37 @@ body {
   bottom: 0;
   left: 0;
   z-index: 100;
-  padding: 20px 0 0;
+  padding: 10px 0;
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
   width: 250px;
   transition: all 0.3s ease-in-out;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: calc(100vh - 56px);
+}
+
+/* Sidebar Scrollbar Styles */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: #2c3e50;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #34495e;
+  border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #4a5f7a;
+}
+
+/* Firefox scrollbar */
+.sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: #34495e #2c3e50;
 }
 
 .sidebar .nav-link {
@@ -132,5 +159,12 @@ main {
 
   main {
     margin-left: 250px;
+  }
+
+  /* Ensure sidebar is scrollable on desktop */
+  .sidebar {
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 }

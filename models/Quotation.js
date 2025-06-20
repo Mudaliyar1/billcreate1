@@ -47,11 +47,6 @@ const QuotationSchema = new mongoose.Schema({
       },
       name: String,
       price: Number,
-      quantity: {
-        type: Number,
-        required: true,
-        default: 1
-      },
       // For ft/rft measurements
       feet: {
         type: Number,
@@ -63,8 +58,8 @@ const QuotationSchema = new mongoose.Schema({
       },
       unitType: {
         type: String,
-        enum: ['piece', 'ft', 'rft'],
-        default: 'piece'
+        enum: ['ft', 'rft'],
+        default: 'ft'
       },
       category: String
     }

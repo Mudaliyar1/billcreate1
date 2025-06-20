@@ -48,19 +48,14 @@
                 </div>
 
                 <div class="row mb-3">
-                  <div class="col-md-6">
+                  <div class="col-md-12">
                     <label for="unitType" class="form-label">Primary Unit Type</label>
                     <select class="form-select" id="unitType" name="unitType" required onchange="togglePriceFields()">
                       <option value="">Select Unit Type</option>
-                      <option value="piece">Piece</option>
                       <option value="ft">Feet</option>
                       <option value="rft">Running Feet</option>
                     </select>
                     <small class="form-text text-muted">This determines the primary pricing method for this product.</small>
-                  </div>
-                  <div class="col-md-6">
-                    <label for="quantity" class="form-label">Initial Quantity</label>
-                    <input type="number" class="form-control" id="quantity" name="quantity" min="0" value="0">
                   </div>
                 </div>
 
@@ -72,15 +67,11 @@
                 </div>
 
                 <div class="row mb-3">
-                  <div class="col-md-4" id="priceField">
-                    <label for="price" class="form-label">Price per Piece (₹)</label>
-                    <input type="number" class="form-control" id="price" name="price" min="0" step="0.01" value="0">
-                  </div>
-                  <div class="col-md-4" id="pricePerFtField">
+                  <div class="col-md-6" id="pricePerFtField">
                     <label for="pricePerFt" class="form-label">Price per Feet (₹)</label>
                     <input type="number" class="form-control" id="pricePerFt" name="pricePerFt" min="0" step="0.01" value="0">
                   </div>
-                  <div class="col-md-4" id="pricePerRftField">
+                  <div class="col-md-6" id="pricePerRftField">
                     <label for="pricePerRft" class="form-label">Price per Running Feet (₹)</label>
                     <input type="number" class="form-control" id="pricePerRft" name="pricePerRft" min="0" step="0.01" value="0">
                   </div>
@@ -140,20 +131,15 @@
 <script>
 function togglePriceFields() {
   const unitType = document.getElementById('unitType').value;
-  const priceField = document.getElementById('priceField');
   const pricePerFtField = document.getElementById('pricePerFtField');
   const pricePerRftField = document.getElementById('pricePerRftField');
 
   // Reset all field styles
-  priceField.style.opacity = '0.6';
   pricePerFtField.style.opacity = '0.6';
   pricePerRftField.style.opacity = '0.6';
 
   // Highlight the primary unit type field
   switch (unitType) {
-    case 'piece':
-      priceField.style.opacity = '1';
-      break;
     case 'ft':
       pricePerFtField.style.opacity = '1';
       break;

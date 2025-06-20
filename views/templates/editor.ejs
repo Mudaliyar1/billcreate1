@@ -34,6 +34,38 @@
             position: relative;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             border: 1px solid #ccc;
+            transform-origin: top left;
+            transition: transform 0.3s ease;
+        }
+
+        /* Mobile responsive canvas */
+        @media (max-width: 768px) {
+            .canvas {
+                width: 595px; /* Keep original size for accuracy */
+                height: 842px;
+                margin: 10px auto;
+                /* Scale down to fit mobile screen */
+                transform: scale(0.5);
+                transform-origin: top center;
+            }
+
+            .canvas-container {
+                overflow: auto;
+                padding: 10px;
+                /* Adjust container to accommodate scaled canvas */
+                min-height: calc(842px * 0.5 + 40px);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .canvas {
+                transform: scale(0.4);
+                margin: 5px auto;
+            }
+
+            .canvas-container {
+                min-height: calc(842px * 0.4 + 20px);
+            }
         }
         
         .element-item {
@@ -163,13 +195,24 @@
 
         /* Mobile-specific improvements */
         @media (max-width: 768px) {
+            .editor-container {
+                height: auto;
+                min-height: calc(100vh - 120px);
+            }
+
             .sidebar {
                 font-size: 14px;
+                border-right: none;
+                border-bottom: 1px solid #dee2e6;
+                height: auto;
+                max-height: 300px;
+                overflow-y: auto;
             }
 
             .element-item {
                 padding: 12px;
                 margin: 8px 0;
+                font-size: 14px;
             }
 
             .canvas-element {
@@ -180,7 +223,115 @@
 
             .properties-panel {
                 font-size: 14px;
+                border-left: none;
+                border-top: 1px solid #dee2e6;
+                height: auto;
+                max-height: 400px;
+                overflow-y: auto;
             }
+
+            /* Stack layout vertically on mobile */
+            .row.h-100 {
+                flex-direction: column;
+                height: auto !important;
+            }
+
+            .col-md-2, .col-md-8 {
+                max-width: 100%;
+                flex: none;
+            }
+
+            /* Toolbar responsive */
+            .toolbar .row {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .toolbar .col-md-6 {
+                max-width: 100%;
+            }
+
+            .toolbar .text-end {
+                text-align: left !important;
+            }
+
+            .toolbar .btn {
+                margin: 2px;
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .element-item {
+                padding: 10px;
+                font-size: 12px;
+            }
+
+            .element-preview {
+                font-size: 10px;
+            }
+
+            .properties-panel {
+                font-size: 12px;
+            }
+
+            .toolbar .btn {
+                font-size: 11px;
+                padding: 5px 10px;
+            }
+
+            .form-control, .form-select {
+                font-size: 14px;
+            }
+
+            /* Mobile navigation improvements */
+            .navbar-brand {
+                font-size: 16px;
+            }
+
+            /* Better touch targets */
+            .btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            .btn-sm {
+                min-height: 36px;
+                min-width: 36px;
+            }
+        }
+
+        /* Landscape mobile adjustments */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .sidebar {
+                max-height: 200px;
+            }
+
+            .properties-panel {
+                max-height: 250px;
+            }
+
+            .canvas {
+                transform: scale(0.6);
+            }
+        }
+
+        /* Touch-friendly scrollbars */
+        .sidebar::-webkit-scrollbar,
+        .properties-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb,
+        .properties-panel::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-track,
+        .properties-panel::-webkit-scrollbar-track {
+            background: #f1f1f1;
         }
     </style>
 </head>
@@ -205,26 +356,33 @@
     <!-- Toolbar -->
     <div class="toolbar">
         <div class="row align-items-center">
-            <div class="col-md-6">
+            <div class="col-12 col-md-6 mb-2 mb-md-0">
                 <div class="input-group">
-                    <span class="input-group-text">Template Name:</span>
-                    <input type="text" class="form-control" id="templateName" 
+                    <span class="input-group-text d-none d-md-inline">Template Name:</span>
+                    <span class="input-group-text d-md-none">Name:</span>
+                    <input type="text" class="form-control" id="templateName"
                            value="<%= template ? template.name : 'New Template' %>">
                 </div>
             </div>
-            <div class="col-md-6 text-end">
-                <button class="btn btn-outline-warning me-2" onclick="forceRefresh()">
-                    <i class="fas fa-sync me-1"></i>Refresh
-                </button>
-                <button class="btn btn-outline-info me-2" onclick="debugTemplate()">
-                    <i class="fas fa-bug me-1"></i>Debug
-                </button>
-                <button class="btn btn-outline-secondary me-2" onclick="previewTemplate()">
-                    <i class="fas fa-eye me-1"></i>Preview
-                </button>
-                <button class="btn btn-success" onclick="saveTemplate()">
-                    <i class="fas fa-save me-1"></i>Save Template
-                </button>
+            <div class="col-12 col-md-6">
+                <div class="d-flex flex-wrap gap-1 justify-content-md-end">
+                    <button class="btn btn-outline-warning btn-sm" onclick="forceRefresh()">
+                        <i class="fas fa-sync"></i>
+                        <span class="d-none d-sm-inline ms-1">Refresh</span>
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" onclick="debugTemplate()">
+                        <i class="fas fa-bug"></i>
+                        <span class="d-none d-sm-inline ms-1">Debug</span>
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="previewTemplate()">
+                        <i class="fas fa-eye"></i>
+                        <span class="d-none d-sm-inline ms-1">Preview</span>
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="saveTemplate()">
+                        <i class="fas fa-save"></i>
+                        <span class="d-none d-sm-inline ms-1">Save</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -233,9 +391,14 @@
     <div class="container-fluid editor-container">
         <div class="row h-100">
             <!-- Elements Sidebar -->
-            <div class="col-md-2 sidebar">
-                <h6 class="p-3 mb-0 border-bottom">Bill Elements</h6>
-                <div class="p-3">
+            <div class="col-12 col-md-2 sidebar">
+                <h6 class="p-3 mb-0 border-bottom">
+                    <i class="fas fa-th-list me-2"></i>Bill Elements
+                    <button class="btn btn-sm btn-outline-secondary float-end d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#elementsCollapse">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </h6>
+                <div class="p-3 collapse show" id="elementsCollapse">
                     <div class="element-item" draggable="true" data-type="company_header">
                         <i class="fas fa-building me-2"></i>
                         <strong>Company Header</strong>
@@ -311,17 +474,40 @@
             </div>
 
             <!-- Canvas Area -->
-            <div class="col-md-8 canvas-container">
+            <div class="col-12 col-md-8 canvas-container">
+                <div class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom d-md-none">
+                    <span class="fw-bold">
+                        <i class="fas fa-edit me-2"></i>Canvas
+                    </span>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary" onclick="zoomOut()">
+                            <i class="fas fa-search-minus"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="resetZoom()">
+                            <i class="fas fa-expand-arrows-alt"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="zoomIn()">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                    </div>
+                </div>
                 <div class="canvas" id="canvas">
                     <!-- Elements will be added here dynamically -->
                 </div>
             </div>
 
             <!-- Properties Panel -->
-            <div class="col-md-2 properties-panel">
-                <h6 class="p-3 mb-0 border-bottom">Properties</h6>
-                <div class="p-3" id="propertiesPanel">
-                    <p class="text-muted">Select an element to edit its properties</p>
+            <div class="col-12 col-md-2 properties-panel">
+                <h6 class="p-3 mb-0 border-bottom">
+                    <i class="fas fa-cog me-2"></i>Properties
+                    <button class="btn btn-sm btn-outline-secondary float-end d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#propertiesCollapse">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </h6>
+                <div class="p-3 collapse show" id="propertiesCollapse">
+                    <div id="propertiesPanel">
+                        <p class="text-muted">Select an element to edit its properties</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -345,6 +531,7 @@
         }
         let elements = [];
         let elementCounter = 0;
+        let currentZoom = 1;
 
         // Initialize editor
         document.addEventListener('DOMContentLoaded', function() {
@@ -1141,6 +1328,56 @@
             document.removeEventListener('touchmove', touchResize);
             document.removeEventListener('touchend', stopTouchResize);
         }
+
+        // Zoom functionality for mobile
+        function zoomIn() {
+            currentZoom = Math.min(currentZoom + 0.1, 2);
+            updateCanvasZoom();
+        }
+
+        function zoomOut() {
+            currentZoom = Math.max(currentZoom - 0.1, 0.2);
+            updateCanvasZoom();
+        }
+
+        function resetZoom() {
+            // Set appropriate zoom based on screen size
+            if (window.innerWidth <= 480) {
+                currentZoom = 0.4;
+            } else if (window.innerWidth <= 768) {
+                currentZoom = 0.5;
+            } else {
+                currentZoom = 1;
+            }
+            updateCanvasZoom();
+        }
+
+        function updateCanvasZoom() {
+            const canvas = document.getElementById('canvas');
+            canvas.style.transform = `scale(${currentZoom})`;
+
+            // Update container height to accommodate scaled canvas
+            const container = canvas.parentElement;
+            const scaledHeight = 842 * currentZoom + 40;
+            container.style.minHeight = scaledHeight + 'px';
+        }
+
+        // Initialize zoom on page load and window resize
+        function initializeZoom() {
+            if (window.innerWidth <= 768) {
+                resetZoom();
+            }
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            setTimeout(initializeZoom, 100);
+        });
+
+        // Initialize zoom after DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initializeZoom, 500);
+        });
     </script>
 </body>
 </html>

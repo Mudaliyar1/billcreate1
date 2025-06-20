@@ -18,7 +18,7 @@ exports.getCreateQuotationProduct = async (req, res) => {
 // Create new quotation product
 exports.postCreateQuotationProduct = async (req, res) => {
   try {
-    const { name, price, pricePerFt, pricePerRft, unitType, quantity } = req.body;
+    const { name, price, pricePerFt, pricePerRft, unitType } = req.body;
 
     // Validation
     if (!name || !unitType) {
@@ -39,8 +39,7 @@ exports.postCreateQuotationProduct = async (req, res) => {
       price: parseFloat(price) || 0,
       pricePerFt: parseFloat(pricePerFt) || 0,
       pricePerRft: parseFloat(pricePerRft) || 0,
-      unitType,
-      quantity: parseInt(quantity) || 0
+      unitType
     };
 
     const quotationProduct = await QuotationProduct.create(quotationProductData);
@@ -167,5 +166,70 @@ exports.getAllQuotationProducts = async (req, res) => {
   } catch (error) {
     console.error('Get all quotation products error:', error);
     res.status(500).json({ error: 'Failed to fetch quotation products' });
+  }
+};
+
+// API endpoint to seed test products
+exports.seedTestProducts = async (req, res) => {
+  try {
+    // Clear existing products
+    await QuotationProduct.deleteMany({});
+
+    // Create test products with proper pricing
+    const testProducts = [
+      {
+        name: 'Gypsum Ceiling Standard',
+        price: 0,
+        pricePerFt: 85,
+        pricePerRft: 0,
+        unitType: 'ft'
+      },
+      {
+        name: 'Gypsum Ceiling Premium',
+        price: 0,
+        pricePerFt: 95,
+        pricePerRft: 0,
+        unitType: 'ft'
+      },
+      {
+        name: 'PVC Channel Basic',
+        price: 0,
+        pricePerFt: 0,
+        pricePerRft: 75,
+        unitType: 'rft'
+      },
+      {
+        name: 'PVC Channel Premium',
+        price: 0,
+        pricePerFt: 0,
+        pricePerRft: 120,
+        unitType: 'rft'
+      },
+      {
+        name: 'Aluminum Channel',
+        price: 0,
+        pricePerFt: 0,
+        pricePerRft: 110,
+        unitType: 'rft'
+      },
+      {
+        name: 'MDF Board',
+        price: 0,
+        pricePerFt: 65,
+        pricePerRft: 0,
+        unitType: 'ft'
+      }
+    ];
+
+    const createdProducts = await QuotationProduct.insertMany(testProducts);
+
+    res.json({
+      success: true,
+      message: `Created ${createdProducts.length} test products`,
+      products: createdProducts
+    });
+  } catch (error) {
+    console.error('Seed test products error:', error);
+    res.status(500).json({ error: 'Failed to seed test products' });
   }
 };

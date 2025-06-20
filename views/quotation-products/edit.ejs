@@ -49,18 +49,13 @@
                 </div>
 
                 <div class="row mb-3">
-                  <div class="col-md-6">
+                  <div class="col-md-12">
                     <label for="unitType" class="form-label">Primary Unit Type</label>
                     <select class="form-select" id="unitType" name="unitType" required onchange="togglePriceFields()">
                       <option value="">Select Unit Type</option>
-                      <option value="piece" <%= quotationProduct.unitType === 'piece' ? 'selected' : '' %>>Piece</option>
                       <option value="ft" <%= quotationProduct.unitType === 'ft' ? 'selected' : '' %>>Feet</option>
                       <option value="rft" <%= quotationProduct.unitType === 'rft' ? 'selected' : '' %>>Running Feet</option>
                     </select>
-                  </div>
-                  <div class="col-md-6">
-                    <label for="quantity" class="form-label">Current Quantity</label>
-                    <input type="number" class="form-control" id="quantity" name="quantity" min="0" value="<%= quotationProduct.quantity %>">
                   </div>
                 </div>
 
@@ -72,15 +67,11 @@
                 </div>
 
                 <div class="row mb-3">
-                  <div class="col-md-4" id="priceField">
-                    <label for="price" class="form-label">Price per Piece (₹)</label>
-                    <input type="number" class="form-control" id="price" name="price" min="0" step="0.01" value="<%= quotationProduct.price %>">
-                  </div>
-                  <div class="col-md-4" id="pricePerFtField">
+                  <div class="col-md-6" id="pricePerFtField">
                     <label for="pricePerFt" class="form-label">Price per Feet (₹)</label>
                     <input type="number" class="form-control" id="pricePerFt" name="pricePerFt" min="0" step="0.01" value="<%= quotationProduct.pricePerFt %>">
                   </div>
-                  <div class="col-md-4" id="pricePerRftField">
+                  <div class="col-md-6" id="pricePerRftField">
                     <label for="pricePerRft" class="form-label">Price per Running Feet (₹)</label>
                     <input type="number" class="form-control" id="pricePerRft" name="pricePerRft" min="0" step="0.01" value="<%= quotationProduct.pricePerRft %>">
                   </div>
@@ -112,18 +103,7 @@
                   <td><strong>Total Sold:</strong></td>
                   <td><%= quotationProduct.totalSold %></td>
                 </tr>
-                <tr>
-                  <td><strong>Current Stock:</strong></td>
-                  <td>
-                    <% if (quotationProduct.quantity <= 5 && quotationProduct.quantity > 0) { %>
-                      <span class="text-warning"><%= quotationProduct.quantity %> (Low Stock)</span>
-                    <% } else if (quotationProduct.quantity === 0) { %>
-                      <span class="text-danger">Out of Stock</span>
-                    <% } else { %>
-                      <%= quotationProduct.quantity %>
-                    <% } %>
-                  </td>
-                </tr>
+
                 <tr>
                   <td><strong>Created:</strong></td>
                   <td><%= new Date(quotationProduct.createdAt).toLocaleDateString('en-IN') %></td>
@@ -139,7 +119,6 @@
             <div class="card-body">
               <h6>Unit Types:</h6>
               <ul class="list-unstyled">
-                <li><strong>Piece:</strong> Individual items</li>
                 <li><strong>Feet:</strong> Linear feet measurement</li>
                 <li><strong>Running Feet:</strong> Running feet measurement</li>
               </ul>
@@ -154,20 +133,15 @@
 <script>
 function togglePriceFields() {
   const unitType = document.getElementById('unitType').value;
-  const priceField = document.getElementById('priceField');
   const pricePerFtField = document.getElementById('pricePerFtField');
   const pricePerRftField = document.getElementById('pricePerRftField');
 
   // Reset all field styles
-  priceField.style.opacity = '0.6';
   pricePerFtField.style.opacity = '0.6';
   pricePerRftField.style.opacity = '0.6';
 
   // Highlight the primary unit type field
   switch (unitType) {
-    case 'piece':
-      priceField.style.opacity = '1';
-      break;
     case 'ft':
       pricePerFtField.style.opacity = '1';
       break;

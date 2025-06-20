@@ -24,14 +24,8 @@ const QuotationProductSchema = new mongoose.Schema({
   // Unit type for this product
   unitType: {
     type: String,
-    enum: ['piece', 'ft', 'rft'],
-    default: 'piece'
-  },
-  quantity: {
-    type: Number,
-    required: true,
-    default: 0,
-    min: 0
+    enum: ['ft', 'rft'],
+    default: 'ft'
   },
   totalSold: {
     type: Number,
