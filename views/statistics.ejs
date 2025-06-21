@@ -12,8 +12,31 @@
         <h1 class="h2">Statistics</h1>
         <div class="btn-toolbar mb-2 mb-md-0">
           <div class="btn-group me-2">
+            <a href="/statistics/daily" class="btn btn-sm btn-primary">
+              <i class="fas fa-calendar-day"></i> Daily Stats
+            </a>
+          </div>
+          <div class="btn-group me-2">
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
               <i class="fas fa-print"></i> Print
+            </button>
+          </div>
+          <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+              <i class="fas fa-download"></i> Export
+            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="/statistics/export?format=json">
+                <i class="fas fa-file-code"></i> Export as JSON
+              </a></li>
+              <li><a class="dropdown-item" href="/statistics/export?format=csv">
+                <i class="fas fa-file-csv"></i> Export as CSV
+              </a></li>
+            </ul>
+          </div>
+          <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+              <i class="fas fa-sync-alt"></i> Refresh
             </button>
           </div>
           <div class="dropdown">
@@ -168,6 +191,157 @@
         </div>
       </div>
 
+      <!-- Enhanced Analytics Sections -->
+
+      <!-- Financial Insights -->
+      <% if (financialInsights) { %>
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header bg-info text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-chart-line"></i> Financial Insights</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-3">
+                  <div class="card border-success mb-3">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Revenue Growth</h6>
+                      <h4 class="text-success">
+                        <%= financialInsights.revenueGrowth %>%
+                        <i class="fas fa-arrow-<%= financialInsights.revenueGrowth >= 0 ? 'up' : 'down' %>"></i>
+                      </h4>
+                      <small class="text-muted">vs Last Month</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card border-warning mb-3">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Collection Rate</h6>
+                      <h4 class="text-warning"><%= financialInsights.collectionRate %>%</h4>
+                      <small class="text-muted">Payment Collection</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card border-primary mb-3">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Avg Order Value</h6>
+                      <h4 class="text-primary">₹<%= financialInsights.avgOrderValue.toFixed(0) %></h4>
+                      <small class="text-muted">Per Transaction</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card border-danger mb-3">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Outstanding</h6>
+                      <h4 class="text-danger">₹<%= financialInsights.totalReceivables.toFixed(0) %></h4>
+                      <small class="text-muted">Pending Collection</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- Customer Analytics -->
+      <% if (customerAnalytics) { %>
+      <div class="row mb-4">
+        <div class="col-md-8">
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-users"></i> Customer Insights</h5>
+            </div>
+            <div class="card-body">
+              <!-- Customer Segmentation -->
+              <div class="row mb-3">
+                <div class="col-md-3">
+                  <div class="text-center">
+                    <h5 class="text-success"><%= customerAnalytics.customerSegments.vip.length %></h5>
+                    <small>VIP Customers<br>(>₹50k)</small>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="text-center">
+                    <h5 class="text-info"><%= customerAnalytics.customerSegments.regular.length %></h5>
+                    <small>Regular Customers<br>(₹10k-50k)</small>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="text-center">
+                    <h5 class="text-warning"><%= customerAnalytics.customerSegments.occasional.length %></h5>
+                    <small>Occasional<br>(₹1k-10k)</small>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="text-center">
+                    <h5 class="text-secondary"><%= customerAnalytics.customerSegments.new.length %></h5>
+                    <small>New Customers<br>(<₹1k)</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Top Customers Table -->
+              <h6 class="mt-4">Top 5 Customers by Value</h6>
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Customer</th>
+                      <th>Total Purchase</th>
+                      <th>Bills</th>
+                      <th>Avg Order</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% customerAnalytics.topCustomers.slice(0, 5).forEach(customer => { %>
+                      <tr>
+                        <td><%= customer.name %></td>
+                        <td>₹<%= customer.totalPurchase.toFixed(0) %></td>
+                        <td><%= customer.billCount %></td>
+                        <td>₹<%= customer.avgOrderValue.toFixed(0) %></td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="card">
+            <div class="card-header bg-success text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-chart-pie"></i> Customer Metrics</h5>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <h6>Total Customer Value</h6>
+                <h4 class="text-success">₹<%= customerAnalytics.totalCustomerValue.toFixed(0) %></h4>
+              </div>
+              <div class="mb-3">
+                <h6>Average Customer Value</h6>
+                <h4 class="text-info">₹<%= customerAnalytics.avgCustomerValue.toFixed(0) %></h4>
+              </div>
+              <div class="mb-3">
+                <h6>Monthly Active Customers</h6>
+                <h4 class="text-warning"><%= customerAnalytics.uniqueMonthlyCustomers %></h4>
+              </div>
+              <div>
+                <h6>Customer Retention Rate</h6>
+                <h4 class="text-primary"><%= customerAnalytics.customerRetentionRate %>%</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% } %>
+
       <!-- Category Sales Table -->
       <div class="row mb-4">
         <div class="col-md-12">
@@ -200,6 +374,161 @@
           </div>
         </div>
       </div>
+
+      <!-- Product Performance Analytics -->
+      <% if (productAnalytics) { %>
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header bg-warning text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-box"></i> Top Selling Products</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Sold</th>
+                      <th>Revenue</th>
+                      <th>Margin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% productAnalytics.topSellingProducts.slice(0, 8).forEach(product => { %>
+                      <tr>
+                        <td><%= product.name %></td>
+                        <td><%= product.totalQuantitySold %></td>
+                        <td>₹<%= product.totalRevenue.toFixed(0) %></td>
+                        <td><span class="badge bg-success"><%= product.profitMargin %>%</span></td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header bg-danger text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-exclamation-triangle"></i> Inventory Alerts</h5>
+            </div>
+            <div class="card-body">
+              <% if (inventoryInsights) { %>
+                <div class="mb-3">
+                  <h6 class="text-danger">Out of Stock (<%= inventoryInsights.outOfStockProducts.length %>)</h6>
+                  <% inventoryInsights.outOfStockProducts.slice(0, 3).forEach(product => { %>
+                    <small class="d-block text-muted">• <%= product.name %></small>
+                  <% }) %>
+                </div>
+
+                <div class="mb-3">
+                  <h6 class="text-warning">Low Stock (<%= inventoryInsights.lowStockProducts.length %>)</h6>
+                  <% inventoryInsights.lowStockProducts.slice(0, 3).forEach(product => { %>
+                    <small class="d-block text-muted">• <%= product.name %> (<%= product.quantity %> left)</small>
+                  <% }) %>
+                </div>
+
+                <div>
+                  <h6 class="text-info">Total Inventory Value</h6>
+                  <h4 class="text-primary">₹<%= inventoryInsights.totalInventoryValue.toFixed(0) %></h4>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- Business Performance Metrics -->
+      <div class="row mb-4">
+        <div class="col-md-4">
+          <% if (quotationAnalytics) { %>
+          <div class="card">
+            <div class="card-header bg-info text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-file-alt"></i> Quotation Metrics</h5>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <h6>Total Quotations</h6>
+                <h4 class="text-info"><%= quotationAnalytics.totalQuotations %></h4>
+              </div>
+              <div class="mb-3">
+                <h6>Conversion Rate</h6>
+                <h4 class="text-success"><%= quotationAnalytics.conversionRate %>%</h4>
+              </div>
+              <div>
+                <h6>Avg Quotation Value</h6>
+                <h4 class="text-primary">₹<%= quotationAnalytics.avgQuotationValue.toFixed(0) %></h4>
+              </div>
+            </div>
+          </div>
+          <% } %>
+        </div>
+
+        <div class="col-md-4">
+          <% if (returnAnalytics) { %>
+          <div class="card">
+            <div class="card-header bg-secondary text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-undo"></i> Return Analytics</h5>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <h6>Total Returns</h6>
+                <h4 class="text-secondary"><%= returnAnalytics.totalReturns %></h4>
+              </div>
+              <div class="mb-3">
+                <h6>Return Rate</h6>
+                <h4 class="text-warning"><%= returnAnalytics.returnRate %>%</h4>
+              </div>
+              <div>
+                <h6>Return Value</h6>
+                <h4 class="text-danger">₹<%= returnAnalytics.totalReturnValue.toFixed(0) %></h4>
+              </div>
+            </div>
+          </div>
+          <% } %>
+        </div>
+
+        <div class="col-md-4">
+          <% if (inventoryInsights && inventoryInsights.categoryTurnover) { %>
+          <div class="card">
+            <div class="card-header bg-success text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-sync"></i> Inventory Turnover</h5>
+            </div>
+            <div class="card-body">
+              <% Object.keys(inventoryInsights.categoryTurnover).forEach(category => { %>
+                <div class="d-flex justify-content-between mb-2">
+                  <span><%= category %></span>
+                  <span class="badge bg-<%= inventoryInsights.categoryTurnover[category].turnover > 1 ? 'success' : 'warning' %>">
+                    <%= inventoryInsights.categoryTurnover[category].turnover %>x
+                  </span>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Growth Trends Chart -->
+      <% if (growthMetrics && growthMetrics.monthlyGrowth) { %>
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header bg-dark text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-chart-area"></i> 6-Month Growth Trends</h5>
+            </div>
+            <div class="card-body">
+              <canvas id="growthTrendsChart" width="400" height="100"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% } %>
+
     </main>
   </div>
 </div>
@@ -337,6 +666,98 @@
         }
       }
     });
+
+    // Growth Trends Chart
+    <% if (growthMetrics && growthMetrics.monthlyGrowth) { %>
+    const growthCtx = document.getElementById('growthTrendsChart').getContext('2d');
+    const growthData = <%- JSON.stringify(growthMetrics.monthlyGrowth) %>;
+
+    const growthChart = new Chart(growthCtx, {
+      type: 'line',
+      data: {
+        labels: growthData.map(item => item.month),
+        datasets: [{
+          label: 'Revenue (₹)',
+          data: growthData.map(item => item.revenue),
+          borderColor: 'rgb(255, 99, 132)',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          tension: 0.1,
+          yAxisID: 'y'
+        }, {
+          label: 'Orders',
+          data: growthData.map(item => item.orders),
+          borderColor: 'rgb(54, 162, 235)',
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          tension: 0.1,
+          yAxisID: 'y1'
+        }, {
+          label: 'Customers',
+          data: growthData.map(item => item.customers),
+          borderColor: 'rgb(255, 205, 86)',
+          backgroundColor: 'rgba(255, 205, 86, 0.2)',
+          tension: 0.1,
+          yAxisID: 'y1'
+        }]
+      },
+      options: {
+        responsive: true,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          title: {
+            display: true,
+            text: '6-Month Business Growth Trends'
+          },
+          legend: {
+            display: true,
+            position: 'top'
+          }
+        },
+        scales: {
+          x: {
+            display: true,
+            title: {
+              display: true,
+              text: 'Month'
+            }
+          },
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            title: {
+              display: true,
+              text: 'Revenue (₹)'
+            },
+            ticks: {
+              callback: function(value, index, values) {
+                return '₹' + value.toLocaleString();
+              }
+            }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            title: {
+              display: true,
+              text: 'Count'
+            },
+            grid: {
+              drawOnChartArea: false,
+            },
+          }
+        }
+      }
+    });
+    <% } %>
+
+    // Auto-refresh statistics every 5 minutes for real-time updates
+    setTimeout(function() {
+      location.reload();
+    }, 300000); // 5 minutes
   });
 </script>
 

@@ -1,0 +1,706 @@
+<%- include('partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('partials/sidebar', { path: '/statistics' }) %>
+    </div>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Daily Statistics</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <div class="btn-group me-2">
+            <a href="/statistics" class="btn btn-sm btn-outline-secondary">
+              <i class="fas fa-chart-bar"></i> Overall Stats
+            </a>
+          </div>
+          <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+              <i class="fas fa-print"></i> Print
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Date Selection -->
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-calendar-alt"></i> Select Date</h5>
+            </div>
+            <div class="card-body">
+              <form method="GET" action="/statistics/daily" class="row g-3">
+                <div class="col-md-4">
+                  <label for="dateInput" class="form-label">Select Date:</label>
+                  <input type="date" class="form-control" id="dateInput" name="date" 
+                         value="<%= selectedDate %>" onchange="this.form.submit()">
+                </div>
+                <div class="col-md-8">
+                  <label class="form-label">Quick Filters:</label>
+                  <div class="btn-group mb-2" role="group">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="setDate('today')">Today</button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="setDate('yesterday')">Yesterday</button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="setDate('week')">Last 7 Days</button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="setDate('month')">This Month</button>
+                  </div>
+                  <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showDateRangeModal()">
+                      <i class="fas fa-calendar-alt"></i> Custom Range
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="showComparison()">
+                      <i class="fas fa-chart-line"></i> Compare Periods
+                    </button>
+                  </div>
+                </div>
+              </form>
+              <div class="mt-2">
+                <h6 class="text-muted">Showing data for: <strong><%= formattedDate %></strong></h6>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+          <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="text-uppercase">Total Bills</h6>
+                  <h2 class="mb-0"><%= totalBills %></h2>
+                </div>
+                <i class="fas fa-file-invoice fa-2x"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+          <div class="card bg-success text-white h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="text-uppercase">Total Revenue</h6>
+                  <h2 class="mb-0">₹<%= totalRevenue.toFixed(0) %></h2>
+                </div>
+                <i class="fas fa-rupee-sign fa-2x"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+          <div class="card bg-info text-white h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="text-uppercase">Customers</h6>
+                  <h2 class="mb-0"><%= totalCustomers %></h2>
+                </div>
+                <i class="fas fa-users fa-2x"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+          <div class="card bg-warning text-white h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="text-uppercase">Avg Order Value</h6>
+                  <h2 class="mb-0">₹<%= avgOrderValue.toFixed(0) %></h2>
+                </div>
+                <i class="fas fa-chart-line fa-2x"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Financial Breakdown -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header bg-success text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-money-bill-wave"></i> Payment Breakdown</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-6">
+                  <div class="text-center">
+                    <h6>Cash Payments</h6>
+                    <h4 class="text-success">₹<%= cashRevenue.toFixed(0) %></h4>
+                    <small class="text-muted"><%= cashBills %> bills</small>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="text-center">
+                    <h6>Credit Sales</h6>
+                    <h4 class="text-warning">₹<%= creditRevenue.toFixed(0) %></h4>
+                    <small class="text-muted"><%= creditBills %> bills</small>
+                  </div>
+                </div>
+              </div>
+              <hr>
+              <div class="row">
+                <div class="col-6">
+                  <div class="text-center">
+                    <h6>Amount Received</h6>
+                    <h4 class="text-primary">₹<%= totalPaid.toFixed(0) %></h4>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="text-center">
+                    <h6>Outstanding</h6>
+                    <h4 class="text-danger">₹<%= totalCredit.toFixed(0) %></h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header bg-info text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-user-friends"></i> Customer Activity</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-6">
+                  <div class="text-center">
+                    <h6>New Customers</h6>
+                    <h4 class="text-success"><%= newCustomers %></h4>
+                    <small class="text-muted">First-time buyers</small>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="text-center">
+                    <h6>Returning Customers</h6>
+                    <h4 class="text-info"><%= returningCustomers %></h4>
+                    <small class="text-muted">Repeat customers</small>
+                  </div>
+                </div>
+              </div>
+              <hr>
+              <div class="text-center">
+                <h6>Customer Retention Rate</h6>
+                <h4 class="text-primary">
+                  <%= totalCustomers > 0 ? ((returningCustomers / totalCustomers) * 100).toFixed(1) : 0 %>%
+                </h4>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Products -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header bg-warning text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-trophy"></i> Top Products by Quantity</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Qty Sold</th>
+                      <th>Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% topProductsByQuantity.slice(0, 8).forEach((product, index) => { %>
+                      <tr>
+                        <td>
+                          <span class="badge bg-<%= index < 3 ? 'success' : 'secondary' %> me-1">
+                            <%= index + 1 %>
+                          </span>
+                          <%= product.name %>
+                        </td>
+                        <td><strong><%= product.quantity %></strong></td>
+                        <td>₹<%= product.revenue.toFixed(0) %></td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header bg-danger text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-chart-bar"></i> Top Products by Revenue</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Revenue</th>
+                      <th>Orders</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% topProductsByRevenue.slice(0, 8).forEach((product, index) => { %>
+                      <tr>
+                        <td>
+                          <span class="badge bg-<%= index < 3 ? 'success' : 'secondary' %> me-1">
+                            <%= index + 1 %>
+                          </span>
+                          <%= product.name %>
+                        </td>
+                        <td><strong>₹<%= product.revenue.toFixed(0) %></strong></td>
+                        <td><%= product.orders %></td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Sales -->
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header bg-secondary text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-tags"></i> Sales by Category</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-striped">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th>Quantity Sold</th>
+                      <th>Revenue</th>
+                      <th>Orders</th>
+                      <th>Avg per Order</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% Object.keys(categorySales).forEach(category => { %>
+                      <tr>
+                        <td><strong><%= category %></strong></td>
+                        <td><%= categorySales[category].quantity %></td>
+                        <td>₹<%= categorySales[category].revenue.toFixed(0) %></td>
+                        <td><%= categorySales[category].orders %></td>
+                        <td>₹<%= (categorySales[category].revenue / categorySales[category].orders).toFixed(0) %></td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Customers -->
+      <div class="row mb-4">
+        <div class="col-md-8">
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-star"></i> Top Customers Today</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Customer</th>
+                      <th>Place</th>
+                      <th>Bills</th>
+                      <th>Total Amount</th>
+                      <th>Paid</th>
+                      <th>Credit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% topCustomers.slice(0, 10).forEach((customer, index) => { %>
+                      <tr>
+                        <td>
+                          <span class="badge bg-<%= index < 3 ? 'success' : 'secondary' %> me-1">
+                            <%= index + 1 %>
+                          </span>
+                          <%= customer.name %>
+                        </td>
+                        <td><%= customer.place %></td>
+                        <td><%= customer.billCount %></td>
+                        <td><strong>₹<%= customer.totalAmount.toFixed(0) %></strong></td>
+                        <td class="text-success">₹<%= customer.paidAmount.toFixed(0) %></td>
+                        <td class="text-danger">₹<%= customer.creditAmount.toFixed(0) %></td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="card">
+            <div class="card-header bg-success text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-clock"></i> Hourly Sales</h5>
+            </div>
+            <div class="card-body">
+              <canvas id="hourlySalesChart" width="400" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Bills -->
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header bg-dark text-white">
+              <h5 class="card-title mb-0"><i class="fas fa-receipt"></i> Recent Bills Today</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Bill #</th>
+                      <th>Time</th>
+                      <th>Customer</th>
+                      <th>Items</th>
+                      <th>Amount</th>
+                      <th>Payment</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% dailyBills.forEach(bill => { %>
+                      <tr>
+                        <td><strong><%= bill.billNumber %></strong></td>
+                        <td><%= new Date(bill.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) %></td>
+                        <td><%= bill.customer.name %></td>
+                        <td><%= bill.items.length %> items</td>
+                        <td>₹<%= bill.totalAmount.toFixed(0) %></td>
+                        <td>
+                          <span class="badge bg-<%= (bill.paymentType === 'Cash') ? 'success' : 'warning' %>">
+                            <%= bill.paymentType || 'Unknown' %>
+                          </span>
+                        </td>
+                        <td>
+                          <span class="badge bg-<%= (bill.remainingAmount > 0) ? 'warning' : 'success' %>">
+                            <%= (bill.remainingAmount > 0) ? 'Partial' : 'Paid' %>
+                          </span>
+                        </td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Date Range Modal -->
+<div class="modal fade" id="dateRangeModal" tabindex="-1" aria-labelledby="dateRangeModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="dateRangeModalLabel">Select Date Range</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="dateRangeForm">
+          <div class="row">
+            <div class="col-md-6">
+              <label for="startDate" class="form-label">Start Date:</label>
+              <input type="date" class="form-control" id="startDate" name="startDate" required>
+            </div>
+            <div class="col-md-6">
+              <label for="endDate" class="form-label">End Date:</label>
+              <input type="date" class="form-control" id="endDate" name="endDate" required>
+            </div>
+          </div>
+          <div class="mt-3">
+            <h6>Quick Ranges:</h6>
+            <div class="btn-group-vertical w-100" role="group">
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange('last7days')">Last 7 Days</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange('last30days')">Last 30 Days</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange('thisMonth')">This Month</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange('lastMonth')">Last Month</button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="applyDateRange()">Apply Range</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Comparison Modal -->
+<div class="modal fade" id="comparisonModal" tabindex="-1" aria-labelledby="comparisonModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="comparisonModalLabel">Period Comparison</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="comparisonContent">
+          <div class="text-center">
+            <div class="spinner-border" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Loading comparison data...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  // Date picker functions
+  function setDate(type) {
+    const dateInput = document.getElementById('dateInput');
+    const today = new Date();
+
+    switch(type) {
+      case 'today':
+        dateInput.value = today.toISOString().split('T')[0];
+        break;
+      case 'yesterday':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        dateInput.value = yesterday.toISOString().split('T')[0];
+        break;
+      case 'week':
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        dateInput.value = weekAgo.toISOString().split('T')[0];
+        break;
+      case 'month':
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        dateInput.value = monthStart.toISOString().split('T')[0];
+        break;
+    }
+    dateInput.form.submit();
+  }
+
+  // Date range modal functions
+  function showDateRangeModal() {
+    const modal = new bootstrap.Modal(document.getElementById('dateRangeModal'));
+    modal.show();
+  }
+
+  function setDateRange(period) {
+    const today = new Date();
+    const startInput = document.getElementById('startDate');
+    const endInput = document.getElementById('endDate');
+
+    switch(period) {
+      case 'last7days':
+        const week = new Date(today);
+        week.setDate(week.getDate() - 7);
+        startInput.value = week.toISOString().split('T')[0];
+        endInput.value = today.toISOString().split('T')[0];
+        break;
+      case 'last30days':
+        const month = new Date(today);
+        month.setDate(month.getDate() - 30);
+        startInput.value = month.toISOString().split('T')[0];
+        endInput.value = today.toISOString().split('T')[0];
+        break;
+      case 'thisMonth':
+        const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        startInput.value = thisMonthStart.toISOString().split('T')[0];
+        endInput.value = thisMonthEnd.toISOString().split('T')[0];
+        break;
+      case 'lastMonth':
+        const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+        startInput.value = lastMonthStart.toISOString().split('T')[0];
+        endInput.value = lastMonthEnd.toISOString().split('T')[0];
+        break;
+    }
+  }
+
+  function applyDateRange() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+
+    if (startDate && endDate) {
+      // For now, redirect to daily view with start date
+      // In future, this could show a range view
+      window.location.href = `/statistics/daily?date=${startDate}`;
+    }
+  }
+
+  // Comparison functionality
+  function showComparison() {
+    const modal = new bootstrap.Modal(document.getElementById('comparisonModal'));
+    modal.show();
+
+    // Load comparison data
+    loadComparisonData();
+  }
+
+  async function loadComparisonData() {
+    try {
+      const currentDate = '<%= selectedDate %>';
+      const yesterday = new Date(currentDate);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      // Get data for current date and previous date
+      const [currentData, previousData] = await Promise.all([
+        fetch(`/statistics/api/daterange?period=today&date=${currentDate}`).then(r => r.json()),
+        fetch(`/statistics/api/daterange?period=today&date=${yesterday.toISOString().split('T')[0]}`).then(r => r.json())
+      ]);
+
+      displayComparison(currentData, previousData);
+    } catch (error) {
+      console.error('Error loading comparison data:', error);
+      document.getElementById('comparisonContent').innerHTML =
+        '<div class="alert alert-danger">Failed to load comparison data</div>';
+    }
+  }
+
+  function displayComparison(current, previous) {
+    const revenueChange = current.summary.totalRevenue - previous.summary.totalRevenue;
+    const revenueChangePercent = previous.summary.totalRevenue > 0 ?
+      ((revenueChange / previous.summary.totalRevenue) * 100).toFixed(1) : 0;
+
+    const billsChange = current.summary.totalBills - previous.summary.totalBills;
+    const customersChange = current.summary.totalCustomers - previous.summary.totalCustomers;
+
+    const comparisonHTML = `
+      <div class="row">
+        <div class="col-md-6">
+          <h6>Today</h6>
+          <div class="card">
+            <div class="card-body">
+              <p><strong>Revenue:</strong> ₹${current.summary.totalRevenue.toFixed(0)}</p>
+              <p><strong>Bills:</strong> ${current.summary.totalBills}</p>
+              <p><strong>Customers:</strong> ${current.summary.totalCustomers}</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <h6>Yesterday</h6>
+          <div class="card">
+            <div class="card-body">
+              <p><strong>Revenue:</strong> ₹${previous.summary.totalRevenue.toFixed(0)}</p>
+              <p><strong>Bills:</strong> ${previous.summary.totalBills}</p>
+              <p><strong>Customers:</strong> ${previous.summary.totalCustomers}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <hr>
+      <div class="row">
+        <div class="col-md-12">
+          <h6>Changes from Yesterday</h6>
+          <div class="alert alert-info">
+            <p><strong>Revenue:</strong>
+              <span class="text-${revenueChange >= 0 ? 'success' : 'danger'}">
+                ${revenueChange >= 0 ? '+' : ''}₹${revenueChange.toFixed(0)}
+                (${revenueChangePercent >= 0 ? '+' : ''}${revenueChangePercent}%)
+              </span>
+            </p>
+            <p><strong>Bills:</strong>
+              <span class="text-${billsChange >= 0 ? 'success' : 'danger'}">
+                ${billsChange >= 0 ? '+' : ''}${billsChange}
+              </span>
+            </p>
+            <p><strong>Customers:</strong>
+              <span class="text-${customersChange >= 0 ? 'success' : 'danger'}">
+                ${customersChange >= 0 ? '+' : ''}${customersChange}
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('comparisonContent').innerHTML = comparisonHTML;
+  }
+
+  // Hourly Sales Chart
+  document.addEventListener('DOMContentLoaded', function() {
+    const hourlySalesCtx = document.getElementById('hourlySalesChart').getContext('2d');
+    const hourlySalesData = <%- JSON.stringify(hourlySales) %>;
+
+    const hourlySalesChart = new Chart(hourlySalesCtx, {
+      type: 'bar',
+      data: {
+        labels: hourlySalesData.map(item => `${item.hour}:00`),
+        datasets: [{
+          label: 'Revenue (₹)',
+          data: hourlySalesData.map(item => item.revenue),
+          backgroundColor: 'rgba(54, 162, 235, 0.6)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          title: {
+            display: true,
+            text: 'Sales by Hour'
+          },
+          legend: {
+            display: false
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return '₹' + value.toLocaleString();
+              }
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Hour of Day'
+            }
+          }
+        }
+      }
+    });
+
+    // Auto-refresh every 5 minutes
+    setTimeout(function() {
+      location.reload();
+    }, 300000);
+  });
+</script>
+
+<%- include('partials/footer') %>
