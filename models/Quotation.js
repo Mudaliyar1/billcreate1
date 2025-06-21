@@ -36,6 +36,11 @@ const QuotationSchema = new mongoose.Schema({
       type: String,
       trim: true,
       default: ''
+    },
+    gstNo: {
+      type: String,
+      trim: true,
+      default: ''
     }
   },
   items: [

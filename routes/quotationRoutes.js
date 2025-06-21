@@ -29,4 +29,7 @@ router.get('/quotation-products/:id/delete', quotationProductController.deleteQu
 router.get('/api/quotation-products/all', quotationProductController.getAllQuotationProducts);
 router.post('/api/quotation-products/seed', quotationProductController.seedTestProducts);
 
+// Migration route (temporary - for fixing existing quotations)
+router.get('/migrate/gst-field', quotationController.migrateGstField);
+
 module.exports = router;

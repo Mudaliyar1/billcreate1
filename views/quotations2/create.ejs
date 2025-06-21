@@ -1,0 +1,321 @@
+<%- include('../partials/header') %>
+
+<style>
+  .item-row {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    padding: 15px;
+    background-color: #f8f9fa;
+  }
+  .remove-item-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+  }
+  .totals-section {
+    background-color: #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+  }
+</style>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 d-md-block bg-dark">
+      <%- include('../partials/sidebar', { path: path }) %>
+    </div>
+
+    <!-- Main Content -->
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+          <i class="fas fa-plus text-primary me-2"></i>
+          Create Quotation 2.0
+        </h1>
+        <a href="/quotations2" class="btn btn-secondary">
+          <i class="fas fa-arrow-left me-1"></i>Back to Quotations
+        </a>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Customer & Item Details</h5>
+        </div>
+        <div class="card-body">
+              <!-- Flash Messages -->
+              <% if (error && error.length > 0) { %>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                  <%= error %>
+                  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+              <% } %>
+
+              <form action="/quotations2/create" method="POST" id="quotationForm" onsubmit="return validateForm()"
+                <!-- Customer Information -->
+                <div class="row mb-4">
+                  <div class="col-12">
+                    <h5 class="text-primary mb-3">
+                      <i class="fas fa-user me-2"></i>Customer Information
+                    </h5>
+                  </div>
+                  
+                  <div class="col-md-6 mb-3">
+                    <label for="customerName" class="form-label">Customer Name *</label>
+                    <input type="text" class="form-control" id="customerName" name="customerName" required>
+                  </div>
+                  
+                  <div class="col-md-6 mb-3">
+                    <label for="customerPhone" class="form-label">Phone Number *</label>
+                    <input type="tel" class="form-control" id="customerPhone" name="customerPhone" required>
+                  </div>
+                  
+                  <div class="col-md-6 mb-3">
+                    <label for="customerEmail" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="customerEmail" name="customerEmail">
+                  </div>
+                  
+                  <div class="col-md-6 mb-3">
+                    <label for="customerPlace" class="form-label">Place *</label>
+                    <input type="text" class="form-control" id="customerPlace" name="customerPlace" required>
+                  </div>
+                  
+                  <div class="col-md-6 mb-3">
+                    <label for="customerAddress" class="form-label">Address *</label>
+                    <textarea class="form-control" id="customerAddress" name="customerAddress" rows="2" required></textarea>
+                  </div>
+                  
+                  <div class="col-md-6 mb-3">
+                    <label for="customerGstNo" class="form-label">GST Number</label>
+                    <input type="text" class="form-control" id="customerGstNo" name="customerGstNo" placeholder="Optional">
+                  </div>
+                </div>
+
+                <!-- Quotation Details -->
+                <div class="row mb-4">
+                  <div class="col-12">
+                    <h5 class="text-primary mb-3">
+                      <i class="fas fa-file-invoice me-2"></i>Quotation Details
+                    </h5>
+                  </div>
+                  
+                  <div class="col-md-6 mb-3">
+                    <label for="validUntil" class="form-label">Valid Until *</label>
+                    <input type="date" class="form-control" id="validUntil" name="validUntil" required>
+                  </div>
+                  
+                  <div class="col-md-6 mb-3">
+                    <label for="notes" class="form-label">Notes</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Additional notes..."></textarea>
+                  </div>
+                </div>
+
+                <!-- Items Section -->
+                <div class="row mb-4">
+                  <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <h5 class="text-primary mb-0">
+                        <i class="fas fa-list me-2"></i>Items
+                      </h5>
+                      <button type="button" class="btn btn-success" id="addItemBtn">
+                        <i class="fas fa-plus me-1"></i>Add Item
+                      </button>
+                    </div>
+                    
+                    <div id="itemsContainer">
+                      <!-- Items will be added here dynamically -->
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Totals Section -->
+                <div class="totals-section">
+                  <div class="row">
+                    <div class="col-md-6 offset-md-6">
+                      <table class="table table-sm">
+                        <tr>
+                          <td><strong>Subtotal:</strong></td>
+                          <td class="text-end">₹<span id="subtotalAmount">0.00</span></td>
+                        </tr>
+                        <tr>
+                          <td><strong>Total Discount:</strong></td>
+                          <td class="text-end">₹<span id="totalDiscountAmount">0.00</span></td>
+                        </tr>
+                        <tr>
+                          <td><strong>Total Tax:</strong></td>
+                          <td class="text-end">₹<span id="totalTaxAmount">0.00</span></td>
+                        </tr>
+                        <tr class="table-primary">
+                          <td><strong>Total Amount:</strong></td>
+                          <td class="text-end"><strong>₹<span id="totalAmount">0.00</span></strong></td>
+                        </tr>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="row mt-4">
+                  <div class="col-12 text-end">
+                    <a href="/quotations2" class="btn btn-secondary me-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                      <i class="fas fa-save me-1"></i>Create Quotation 2.0
+                    </button>
+                  </div>
+                </div>
+              </form>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let itemCounter = 0;
+
+    // Set default valid until date (30 days from now)
+    document.addEventListener('DOMContentLoaded', function() {
+      const validUntilInput = document.getElementById('validUntil');
+      const today = new Date();
+      const futureDate = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000));
+      validUntilInput.value = futureDate.toISOString().split('T')[0];
+
+      // Add first item by default
+      addItem();
+    });
+
+    // Add item function
+    function addItem() {
+      const container = document.getElementById('itemsContainer');
+      const itemHtml = `
+        <div class="item-row position-relative" data-item-index="${itemCounter}">
+          <button type="button" class="btn btn-sm btn-danger remove-item-btn" onclick="removeItem(this)">
+            <i class="fas fa-times"></i>
+          </button>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Item Name *</label>
+              <input type="text" class="form-control" name="items[${itemCounter}][itemName]" required>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Description</label>
+              <input type="text" class="form-control" name="items[${itemCounter}][description]" placeholder="Optional description">
+            </div>
+            
+            <div class="col-md-3 mb-3">
+              <label class="form-label">Quantity *</label>
+              <input type="number" class="form-control item-quantity" name="items[${itemCounter}][quantity]"
+                     step="0.01" min="0" required onchange="calculateTotals()">
+            </div>
+            
+            <div class="col-md-3 mb-3">
+              <label class="form-label">Unit *</label>
+              <select class="form-select" name="items[${itemCounter}][unit]" required>
+                <option value="Sqf">Sqf</option>
+                <option value="Rft">Rft</option>
+                <option value="Ft">Ft</option>
+                <option value="Pcs">Pcs</option>
+                <option value="Nos">Nos</option>
+                <option value="Kg">Kg</option>
+                <option value="Meter">Meter</option>
+              </select>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+              <label class="form-label">Amount (₹) *</label>
+              <input type="number" class="form-control item-amount" name="items[${itemCounter}][amount]"
+                     step="0.01" min="0" required onchange="calculateTotals()">
+            </div>
+            
+            <div class="col-md-3 mb-3">
+              <label class="form-label">Discount (%)</label>
+              <input type="number" class="form-control item-discount" name="items[${itemCounter}][discount]"
+                     step="0.01" min="0" max="100" value="0" onchange="calculateTotals()">
+            </div>
+
+            <div class="col-md-3 mb-3">
+              <label class="form-label">Tax (%)</label>
+              <input type="number" class="form-control item-tax" name="items[${itemCounter}][taxPercent]"
+                     step="0.01" min="0" max="100" value="0" onchange="calculateTotals()">
+            </div>
+          </div>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', itemHtml);
+      itemCounter++;
+    }
+
+    // Remove item function
+    function removeItem(button) {
+      const itemRow = button.closest('.item-row');
+      itemRow.remove();
+      calculateTotals();
+    }
+
+    // Calculate totals
+    function calculateTotals() {
+      let subtotal = 0;
+      let totalDiscount = 0;
+      let totalTax = 0;
+
+      document.querySelectorAll('.item-row').forEach(row => {
+        const amount = parseFloat(row.querySelector('.item-amount').value) || 0;
+        const discount = parseFloat(row.querySelector('.item-discount').value) || 0;
+        const tax = parseFloat(row.querySelector('.item-tax').value) || 0;
+
+        const discountAmount = (amount * discount) / 100;
+        const afterDiscount = amount - discountAmount;
+        const taxAmount = (afterDiscount * tax) / 100;
+
+        subtotal += amount;
+        totalDiscount += discountAmount;
+        totalTax += taxAmount;
+      });
+
+      const totalAmount = subtotal - totalDiscount + totalTax;
+
+      document.getElementById('subtotalAmount').textContent = subtotal.toFixed(2);
+      document.getElementById('totalDiscountAmount').textContent = totalDiscount.toFixed(2);
+      document.getElementById('totalTaxAmount').textContent = totalTax.toFixed(2);
+      document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
+    }
+
+    // Form submission validation
+    document.getElementById('quotationForm').addEventListener('submit', function(e) {
+      const items = document.querySelectorAll('.item-row');
+      if (items.length === 0) {
+        e.preventDefault();
+        alert('Please add at least one item');
+        return false;
+      }
+
+      // Validate each item
+      let isValid = true;
+      items.forEach(item => {
+        const itemName = item.querySelector('input[name*="[itemName]"]').value.trim();
+        const quantity = item.querySelector('input[name*="[quantity]"]').value;
+        const amount = item.querySelector('input[name*="[amount]"]').value;
+
+        if (!itemName || !quantity || !amount || parseFloat(amount) <= 0) {
+          isValid = false;
+        }
+      });
+
+      if (!isValid) {
+        e.preventDefault();
+        alert('Please fill all required fields for each item and ensure amount is greater than 0');
+        return false;
+      }
+    });
+
+    // Add item button event
+    document.getElementById('addItemBtn').addEventListener('click', addItem);
+  </script>
+
+<%- include('../partials/footer') %>

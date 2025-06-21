@@ -20,6 +20,11 @@ const CustomerSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  gstNo: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   createdAt: {
     type: Date,
     default: Date.now

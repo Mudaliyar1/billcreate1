@@ -116,6 +116,12 @@
                   <td><%= quotation.customer.email %></td>
                 </tr>
                 <% } %>
+                <% if (quotation.customer.gstNo && quotation.customer.gstNo.trim() !== '') { %>
+                <tr>
+                  <td><strong>GST Number:</strong></td>
+                  <td><%= quotation.customer.gstNo %></td>
+                </tr>
+                <% } %>
               </table>
             </div>
           </div>

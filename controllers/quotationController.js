@@ -34,13 +34,16 @@ exports.getCreateQuotation = async (req, res) => {
 exports.postCreateQuotation = async (req, res) => {
   try {
     console.log('Request body:', JSON.stringify(req.body, null, 2));
-    
+
     // Extract form data
     const customerName = req.body.customerName;
     const customerPhone = req.body.customerPhone;
     const customerPlace = req.body.customerPlace;
     const customerEmail = req.body.customerEmail;
+    const customerGstNo = req.body.customerGstNo;
     const unknownCustomer = req.body.unknownCustomer === 'on';
+
+    console.log('Extracted customer GST number:', customerGstNo);
     const discountAmount = req.body.discountAmount;
     const gstEnabled = req.body.gstEnabled === 'on';
     const gstType = req.body.gstType;
@@ -208,7 +211,8 @@ exports.postCreateQuotation = async (req, res) => {
         name: unknownCustomer ? 'Unknown' : customerName,
         phone: unknownCustomer ? 'Unknown' : customerPhone,
         place: unknownCustomer ? 'Unknown' : customerPlace,
-        email: unknownCustomer ? '' : (customerEmail || '')
+        email: unknownCustomer ? '' : (customerEmail || ''),
+        gstNo: unknownCustomer ? '' : (customerGstNo || '')
       },
       items,
       subTotal: totalAmount,
@@ -231,6 +235,7 @@ exports.postCreateQuotation = async (req, res) => {
     const quotation = await Quotation.create(quotationData);
 
     console.log('Quotation created:', quotation._id);
+    console.log('Quotation customer GST number:', quotation.customer.gstNo);
 
     // Generate PDF
     const pdfDir = path.join(__dirname, '../public/quotations');
@@ -252,7 +257,8 @@ exports.postCreateQuotation = async (req, res) => {
             name: customerName,
             phone: customerPhone,
             place: customerPlace,
-            email: customerEmail || ''
+            email: customerEmail || '',
+            gstNo: customerGstNo || ''
           });
           console.log('New customer saved');
         }
@@ -297,6 +303,10 @@ exports.getQuotationDetails = async (req, res) => {
       req.flash('error', 'Quotation not found');
       return res.redirect('/quotations');
     }
+
+    // Debug: Log the quotation customer data
+    console.log('Quotation customer data:', JSON.stringify(quotation.customer, null, 2));
+    console.log('GST Number:', quotation.customer.gstNo);
 
     res.render('quotations/details', {
       title: `Quotation ${quotation.quotationNumber} - Kushi Decorators`,
@@ -354,6 +364,7 @@ exports.updateQuotation = async (req, res) => {
       customerPhone,
       customerPlace,
       customerEmail,
+      customerGstNo,
       discountAmount,
       gstEnabled,
       gstType,
@@ -369,6 +380,7 @@ exports.updateQuotation = async (req, res) => {
     quotation.customer.phone = customerPhone;
     quotation.customer.place = customerPlace;
     quotation.customer.email = customerEmail || '';
+    quotation.customer.gstNo = customerGstNo || '';
     quotation.isUnknown = unknownCustomer === 'on';
 
     // Update quotation date if provided
@@ -488,4 +500,29 @@ exports.deleteQuotation = async (req, res) => {
   }
 };
 
+// Migration function to add GST number field to existing quotations
+exports.migrateGstField = async (req, res) => {
+  try {
+    console.log('Starting GST field migration...');
 
+    // Update all quotations that don't have the gstNo field
+    const result = await Quotation.updateMany(
+      { 'customer.gstNo': { $exists: false } },
+      { $set: { 'customer.gstNo': '' } }
+    );
+
+    console.log('Migration completed:', result);
+
+    res.json({
+      success: true,
+      message: `Updated ${result.modifiedCount} quotations with GST field`,
+      result: result
+    });
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};

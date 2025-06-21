@@ -798,19 +798,35 @@ const generateQuotationPDF = (quotation, filePath) => {
          .text('QUOTE TO', 40, billingY + 20);
 
       // Customer details
+      let currentCustomerY = billingY + 45;
       doc.fontSize(11)
          .font('Helvetica')
          .fillColor(darkText)
-         .text(`${quotation.customer.name}`, 40, billingY + 45)
-         .text(`Phone: ${quotation.customer.phone}`, 40, billingY + 65)
-         .text(`Place: ${quotation.customer.place}`, 40, billingY + 85);
+         .text(`${quotation.customer.name}`, 40, currentCustomerY);
+
+      currentCustomerY += 20;
+      doc.text(`Phone: ${quotation.customer.phone}`, 40, currentCustomerY);
+
+      currentCustomerY += 20;
+      doc.text(`Place: ${quotation.customer.place}`, 40, currentCustomerY);
 
       if (quotation.customer.email) {
-        doc.text(`Email: ${quotation.customer.email}`, 40, billingY + 105);
+        currentCustomerY += 20;
+        doc.text(`Email: ${quotation.customer.email}`, 40, currentCustomerY);
       }
 
-      // Items table header
-      const tableY = billingY + 140;
+      console.log('PDF Generation - Customer GST No:', quotation.customer.gstNo);
+      console.log('PDF Generation - Full customer object:', JSON.stringify(quotation.customer, null, 2));
+      if (quotation.customer.gstNo && quotation.customer.gstNo.trim() !== '') {
+        currentCustomerY += 20;
+        doc.text(`GST No: ${quotation.customer.gstNo}`, 40, currentCustomerY);
+        console.log('GST number added to PDF at Y position:', currentCustomerY);
+      } else {
+        console.log('No GST number found for customer or GST number is empty');
+      }
+
+      // Items table header (adjust position based on customer info)
+      const tableY = currentCustomerY + 40;
       doc.fontSize(11)
          .font('Helvetica-Bold')
          .fillColor(primaryColor)
@@ -1323,9 +1339,347 @@ const renderQRCode = async (doc, x, y, size, qrCodeDataURL) => {
   }
 };
 
+// Generate Quotation 2.0 PDF
+async function generateQuotation2PDF(quotation) {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        margin: 40,
+        size: 'A4',
+        autoFirstPage: true,
+        bufferPages: true,
+        info: {
+          Title: `Khushi Decorators - Quotation 2.0 ${quotation.quotationNumber}`,
+          Author: 'Khushi Decorators',
+          Subject: 'Quotation 2.0',
+          Keywords: 'quotation, estimate, quote'
+        }
+      });
+      const chunks = [];
+
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+
+      // Define colors
+      const primaryColor = '#2c3e50';
+      const secondaryColor = '#7f8c8d';
+      const accentColor = '#3498db';
+      const darkText = '#2c3e50';
+
+      // Header with company info
+      doc.fontSize(24)
+         .font('Helvetica-Bold')
+         .fillColor(primaryColor)
+         .text('KHUSHI DECORATORS', 40, 40, { align: 'center' })
+         .fontSize(10)
+         .font('Helvetica')
+         .fillColor(secondaryColor)
+         .text('68/1159, Shivamod Nagar, Nr Nagurewl Hanuman Temple, Nr Union Industries Estate, Amraiwadi, Ahmedabad', 40, 110, {
+           align: 'center',
+           width: doc.page.width - 200
+         });
+
+      // Quotation details (right side)
+      doc.fontSize(18)
+         .font('Helvetica-Bold')
+         .fillColor(accentColor)
+         .text('QUOTATION', doc.page.width - 150, 40)
+         .fontSize(12)
+         .font('Helvetica')
+         .fillColor(darkText)
+         .text(`#${quotation.quotationNumber}`, doc.page.width - 150, 65)
+         .text(`Date: ${quotation.date.toLocaleDateString('en-IN')}`, doc.page.width - 150, 85)
+         .text(`Valid Until: ${quotation.validUntil.toLocaleDateString('en-IN')}`, doc.page.width - 150, 105);
+
+      // Customer and billing information section
+      const billingY = 160;
+
+      // Draw separator line
+      doc.strokeColor(primaryColor)
+         .opacity(0.3)
+         .moveTo(40, billingY)
+         .lineTo(doc.page.width - 40, billingY)
+         .stroke()
+         .opacity(1);
+
+      // Customer Information
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor(primaryColor)
+         .text('QUOTE TO', 40, billingY + 20);
+
+      // Customer details
+      let currentCustomerY = billingY + 45;
+      doc.fontSize(11)
+         .font('Helvetica')
+         .fillColor(darkText)
+         .text(`${quotation.customer.name}`, 40, currentCustomerY);
+
+      currentCustomerY += 20;
+      doc.text(`Phone: ${quotation.customer.phone}`, 40, currentCustomerY);
+
+      currentCustomerY += 20;
+      doc.text(`Place: ${quotation.customer.place}`, 40, currentCustomerY);
+
+      if (quotation.customer.email && quotation.customer.email.trim() !== '') {
+        currentCustomerY += 20;
+        doc.text(`Email: ${quotation.customer.email}`, 40, currentCustomerY);
+      }
+
+      if (quotation.customer.gstNo && quotation.customer.gstNo.trim() !== '') {
+        currentCustomerY += 20;
+        doc.text(`GST No: ${quotation.customer.gstNo}`, 40, currentCustomerY);
+      }
+
+      currentCustomerY += 20;
+      doc.text(`Address: ${quotation.customer.address}`, 40, currentCustomerY);
+
+      // Items table header (adjust position based on customer info)
+      const tableY = currentCustomerY + 40;
+      // Table styling with better column widths
+      const tableHeaderY = tableY;
+      const srNoX = 40;
+      const itemNameX = 70;
+      const descriptionX = 170;
+      const qtyX = 350;
+      const unitX = 390;
+      const amountX = 430;
+      const finalAmountX = 490;
+
+      // Table header background
+      doc.rect(40, tableHeaderY, doc.page.width - 80, 20)
+         .fillColor('#f8f9fa')
+         .fill();
+
+      // Table header text
+      doc.fontSize(10)
+         .font('Helvetica-Bold')
+         .fillColor('#000000')  // Explicit black color for better visibility
+         .text('Sr.', srNoX, tableHeaderY + 5)
+         .text('Item Name', itemNameX, tableHeaderY + 5)
+         .text('Description', descriptionX, tableHeaderY + 5)
+         .text('Qty', qtyX, tableHeaderY + 5)
+         .text('Unit', unitX, tableHeaderY + 5)
+         .text('Amount', amountX, tableHeaderY + 5)
+         .text('Final', finalAmountX, tableHeaderY + 5);
+
+      // Table header line
+      doc.strokeColor(primaryColor)
+         .opacity(0.3)
+         .moveTo(40, tableHeaderY + 20)
+         .lineTo(doc.page.width - 40, tableHeaderY + 20)
+         .stroke()
+         .opacity(1);
+
+      // Items
+      let itemY = tableHeaderY + 30;
+      doc.font('Helvetica')
+         .fillColor(darkText);
+
+      quotation.items.forEach((item, index) => {
+        const amount = item.amount || 0;
+        const discountAmount = (amount * item.discount) / 100;
+        const afterDiscount = amount - discountAmount;
+        const taxAmount = (afterDiscount * item.taxPercent) / 100;
+        const finalAmount = afterDiscount + taxAmount;
+
+        // Check if we need a new page
+        if (itemY > 700) {
+          doc.addPage();
+          itemY = 40;
+        }
+
+        // Calculate row height based on description length
+        const descriptionText = item.description || '-';
+        const descriptionWidth = 170; // Width available for description column
+        const descriptionLines = Math.ceil(descriptionText.length / 25); // More realistic characters per line
+        const rowHeight = Math.max(30, descriptionLines * 15 + 15); // Better spacing for readability
+
+        // Draw row background (alternating colors)
+        if (index % 2 === 1) {
+          doc.rect(40, itemY - 5, doc.page.width - 80, rowHeight)
+             .fillColor('#f9f9f9')
+             .fill();
+        }
+
+        // Draw vertical borders for table columns
+        doc.strokeColor('#e0e0e0')
+           .opacity(0.5)
+           .moveTo(srNoX - 5, itemY - 5)
+           .lineTo(srNoX - 5, itemY + rowHeight - 5)
+           .stroke()
+           .moveTo(itemNameX - 5, itemY - 5)
+           .lineTo(itemNameX - 5, itemY + rowHeight - 5)
+           .stroke()
+           .moveTo(descriptionX - 5, itemY - 5)
+           .lineTo(descriptionX - 5, itemY + rowHeight - 5)
+           .stroke()
+           .moveTo(qtyX - 5, itemY - 5)
+           .lineTo(qtyX - 5, itemY + rowHeight - 5)
+           .stroke()
+           .moveTo(unitX - 5, itemY - 5)
+           .lineTo(unitX - 5, itemY + rowHeight - 5)
+           .stroke()
+           .moveTo(amountX - 5, itemY - 5)
+           .lineTo(amountX - 5, itemY + rowHeight - 5)
+           .stroke()
+           .moveTo(finalAmountX - 5, itemY - 5)
+           .lineTo(finalAmountX - 5, itemY + rowHeight - 5)
+           .stroke()
+           .opacity(1);
+
+        // Draw horizontal border for row
+        doc.strokeColor('#e0e0e0')
+           .opacity(0.3)
+           .moveTo(40, itemY + rowHeight - 5)
+           .lineTo(doc.page.width - 40, itemY + rowHeight - 5)
+           .stroke()
+           .opacity(1);
+
+        // Add text content with proper spacing and full description
+        doc.fontSize(9)
+           .fillColor(darkText)
+           .text((index + 1).toString(), srNoX, itemY + 5)
+           .text(item.itemName, itemNameX, itemY + 5, { width: 95, height: rowHeight - 10 })
+           .text(descriptionText, descriptionX, itemY + 5, {
+             width: 170,
+             height: rowHeight - 10,
+             lineGap: 2,
+             wordSpacing: 0,
+             characterSpacing: 0
+           })
+           .text(item.quantity.toString(), qtyX, itemY + 5)
+           .text(item.unit, unitX, itemY + 5)
+           .text(`Rs ${amount.toFixed(2)}`, amountX, itemY + 5)
+           .text(`Rs ${finalAmount.toFixed(2)}`, finalAmountX, itemY + 5);
+
+        itemY += rowHeight;
+      });
+
+      // Table footer line
+      doc.strokeColor(primaryColor)
+         .opacity(0.3)
+         .moveTo(40, itemY)
+         .lineTo(doc.page.width - 40, itemY)
+         .stroke()
+         .opacity(1);
+
+      // Totals section
+      itemY += 30;
+      const totalsX = doc.page.width - 200;
+
+      // Totals background
+      doc.rect(totalsX - 10, itemY - 10, 180, 80)
+         .fillColor('#f8f9fa')
+         .fill();
+
+      doc.fontSize(10)
+         .font('Helvetica')
+         .fillColor(darkText)
+         .text(`Subtotal: Rs ${quotation.subtotal.toFixed(2)}`, totalsX, itemY);
+      itemY += 15;
+      doc.text(`Total Discount: Rs ${quotation.totalDiscount.toFixed(2)}`, totalsX, itemY);
+      itemY += 15;
+      doc.text(`Total Tax: Rs ${quotation.totalTax.toFixed(2)}`, totalsX, itemY);
+      itemY += 15;
+
+      // Total amount with emphasis
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor(primaryColor)
+         .text(`Total Amount: Rs ${quotation.totalAmount.toFixed(2)}`, totalsX, itemY);
+
+      // Notes section
+      if (quotation.notes && quotation.notes.trim() !== '') {
+        itemY += 50;
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .fillColor(primaryColor)
+           .text('Notes:', 40, itemY);
+        itemY += 20;
+        doc.fontSize(10)
+           .font('Helvetica')
+           .fillColor(darkText)
+           .text(quotation.notes, 40, itemY, { width: 400 });
+      }
+
+      // Terms and Conditions
+      itemY += 50;
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor(primaryColor)
+         .text('Terms & Conditions:', 40, itemY);
+      itemY += 20;
+      doc.fontSize(10)
+         .font('Helvetica')
+         .fillColor(darkText)
+         .text('Thank you for your business! Sold products cannot be returned.', 40, itemY, { width: 400 });
+
+      // Signature Section
+      itemY += 60;
+
+      // Check if we need a new page for signatures
+      if (itemY > doc.page.height - 150) {
+        doc.addPage();
+        itemY = 40;
+      }
+
+      // Signature boxes
+      const signatureY = itemY;
+      const leftSignatureX = 40;
+      const rightSignatureX = doc.page.width - 250;
+      const signatureWidth = 200;
+      const signatureHeight = 80;
+
+      // Company signature box
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor(primaryColor)
+         .text('Company Signature:', leftSignatureX, signatureY);
+
+      doc.rect(leftSignatureX, signatureY + 20, signatureWidth, signatureHeight)
+         .strokeColor('#cccccc')
+         .stroke();
+
+      doc.fontSize(10)
+         .font('Helvetica')
+         .fillColor(darkText)
+         .text('Authorized Signatory', leftSignatureX, signatureY + signatureHeight + 30)
+         .text('Khushi Decorators', leftSignatureX, signatureY + signatureHeight + 45);
+
+      // Client signature box
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor(primaryColor)
+         .text('Client Signature:', rightSignatureX, signatureY);
+
+      doc.rect(rightSignatureX, signatureY + 20, signatureWidth, signatureHeight)
+         .strokeColor('#cccccc')
+         .stroke();
+
+      doc.fontSize(10)
+         .font('Helvetica')
+         .fillColor(darkText)
+         .text('Client Signature', rightSignatureX, signatureY + signatureHeight + 30)
+         .text('Date: _______________', rightSignatureX, signatureY + signatureHeight + 45);
+
+      // Footer
+      doc.fontSize(8)
+         .fillColor(secondaryColor)
+         .text('This is a computer generated quotation.', 40, doc.page.height - 60, { align: 'center' });
+
+      doc.end();
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      reject(error);
+    }
+  });
+}
+
 module.exports = {
   generateBillPDF,
   generateReturnBillPDF,
   generateQuotationPDF,
+  generateQuotation2PDF,
   generateBillPDFWithTemplate
 };
