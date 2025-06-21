@@ -463,38 +463,6 @@ const generateBillPDF = (bill, filePath) => {
         }
       }
 
-      // Terms and conditions section - positioned below payment details to avoid QR code overlap
-      const termsY = paymentY + 120; // Position below payment details and QR code
-      doc.fontSize(11)
-         .font('Helvetica-Bold')
-         .fillColor(primaryColor)
-         .text('Terms & Conditions:', 200, termsY);
-
-      doc.fontSize(9)
-         .font('Helvetica')
-         .fillColor(darkText)
-         .text('• Sold products cannot be returned or exchanged.', 200, termsY + 20)
-         .text('• All payments should be made as per agreed terms.', 200, termsY + 35)
-         .text('• Material delivery charges may apply separately.', 200, termsY + 50)
-         .text('• Any disputes are subject to Ahmedabad jurisdiction only.', 200, termsY + 65);
-
-      // Footer section with modern design - ensure it's below terms
-      const footerY = Math.max(termsY + 100, doc.page.height - 80);
-
-      // Thank you message
-      doc.fillColor(darkText)
-      .fontSize(14)
-      .font('Helvetica-Bold')
-      .text('Thank you for your business!', 0, footerY - 30, { align: 'center' });
-
-      // Separator line
-      doc.strokeColor(primaryColor)
-         .opacity(0.3)
-         .moveTo(40, footerY - 10)
-         .lineTo(doc.page.width - 40, footerY - 10)
-         .stroke()
-         .opacity(1);
-
       // Position QR code on the left side under PAYMENT DETAILS section
       // Calculate position based on payment section
       const qrCodeY = paymentY + 60; // Position below payment method text
@@ -536,15 +504,57 @@ const generateBillPDF = (bill, filePath) => {
         // Continue with PDF generation even if QR code fails
       }
 
-      // Contact information with improved layout
-      doc.fillColor(secondaryColor)
-         .fontSize(10)
+      // Terms and conditions section - positioned to the right of QR code
+      const termsY = qrCodeY; // Align with QR code
+      const termsX = 200; // Position to the right of QR code
+      doc.fontSize(11)
+         .font('Helvetica-Bold')
+         .fillColor(primaryColor)
+         .text('Terms & Conditions:', termsX, termsY);
+
+      doc.fontSize(9)
          .font('Helvetica')
-         .text('Kushi Decorators', 160, footerY + 5)
-         .text('|', 240, footerY + 5)
-         .text('Phone: +91 9724066417', 260, footerY + 5)
-         .text('|', 420, footerY + 5)
-         .text('Email: info@kushitrader.com', 440, footerY + 5);
+         .fillColor(darkText)
+         .text('• Sold products cannot be returned or exchanged.', termsX, termsY + 20)
+         .text('• All payments should be made as per agreed terms.', termsX, termsY + 35)
+         .text('• Material delivery charges may apply separately.', termsX, termsY + 50)
+         .text('• Any disputes are subject to Ahmedabad jurisdiction only.', termsX, termsY + 65);
+
+      // Calculate footer position more conservatively to avoid extra pages
+      const contentEndY = Math.max(qrCodeY + 110, termsY + 85); // End of QR code or terms, whichever is lower
+      const availableSpace = doc.page.height - contentEndY - 40; // Space remaining on page
+
+      // Only add footer if there's enough space, otherwise it will naturally fit
+      let footerY = contentEndY + 20;
+
+      // Only add footer elements if there's enough space to avoid extra pages
+      if (availableSpace >= 60) {
+        // Thank you message
+        doc.fillColor(darkText)
+           .fontSize(14)
+           .font('Helvetica-Bold')
+           .text('Thank you for your business!', 0, footerY, { align: 'center' });
+
+        // Separator line
+        doc.strokeColor(primaryColor)
+           .opacity(0.3)
+           .moveTo(40, footerY + 20)
+           .lineTo(doc.page.width - 40, footerY + 20)
+           .stroke()
+           .opacity(1);
+
+        footerY += 40; // Adjust for contact info
+
+        // Contact information with improved layout
+        doc.fillColor(secondaryColor)
+           .fontSize(10)
+           .font('Helvetica')
+           .text('Kushi Decorators', 160, footerY)
+           .text('|', 240, footerY)
+           .text('Phone: +91 9724066417', 260, footerY)
+           .text('|', 420, footerY)
+           .text('Email: info@kushitrader.com', 440, footerY);
+      }
 
 
 
@@ -689,26 +699,31 @@ const generateReturnBillPDF = (returnBill, filePath) => {
         }
       });
 
-      // Footer section
-      const footerY = doc.page.height - 80;
+      // Footer section - calculate based on content end to avoid extra pages
+      const contentEndY = currentY + 20;
+      const availableSpace = doc.page.height - contentEndY - 40;
+      let footerY = contentEndY + 20;
 
-      // Separator line
-      doc.strokeColor(primaryColor)
-         .opacity(0.3)
-         .moveTo(40, footerY - 10)
-         .lineTo(doc.page.width - 40, footerY - 10)
-         .stroke()
-         .opacity(1);
+      // Only add footer elements if there's enough space to avoid extra pages
+      if (availableSpace >= 40) {
+        // Separator line
+        doc.strokeColor(primaryColor)
+           .opacity(0.3)
+           .moveTo(40, footerY)
+           .lineTo(doc.page.width - 40, footerY)
+           .stroke()
+           .opacity(1);
 
-      // Contact information with improved layout
-      doc.fillColor(secondaryColor)
-         .fontSize(10)
-         .font('Helvetica')
-         .text('Kushi Decorators', 160, footerY + 5)
-         .text('|', 240, footerY + 5)
-         .text('Phone: +91 9724066417', 260, footerY + 5)
-         .text('|', 420, footerY + 5)
-         .text('Email: info@kushitrader.com', 440, footerY + 5);
+        // Contact information with improved layout
+        doc.fillColor(secondaryColor)
+           .fontSize(10)
+           .font('Helvetica')
+           .text('Kushi Decorators', 160, footerY + 20)
+           .text('|', 240, footerY + 20)
+           .text('Phone: +91 9724066417', 260, footerY + 20)
+           .text('|', 420, footerY + 20)
+           .text('Email: info@kushitrader.com', 440, footerY + 20);
+      }
 
       // Finalize the PDF
       doc.end();
@@ -797,28 +812,28 @@ const generateQuotationPDF = (quotation, filePath) => {
          .fillColor(primaryColor)
          .text('QUOTE TO', 40, billingY + 20);
 
-      // Customer details
-      let currentCustomerY = billingY + 45;
+      // Customer details - more compact spacing
+      let currentCustomerY = billingY + 35; // Reduced from 45
       doc.fontSize(11)
          .font('Helvetica')
          .fillColor(darkText)
          .text(`${quotation.customer.name}`, 40, currentCustomerY);
 
-      currentCustomerY += 20;
+      currentCustomerY += 15; // Reduced from 20
       doc.text(`Phone: ${quotation.customer.phone}`, 40, currentCustomerY);
 
-      currentCustomerY += 20;
+      currentCustomerY += 15; // Reduced from 20
       doc.text(`Place: ${quotation.customer.place}`, 40, currentCustomerY);
 
       if (quotation.customer.email) {
-        currentCustomerY += 20;
+        currentCustomerY += 15; // Reduced from 20
         doc.text(`Email: ${quotation.customer.email}`, 40, currentCustomerY);
       }
 
       console.log('PDF Generation - Customer GST No:', quotation.customer.gstNo);
       console.log('PDF Generation - Full customer object:', JSON.stringify(quotation.customer, null, 2));
       if (quotation.customer.gstNo && quotation.customer.gstNo.trim() !== '') {
-        currentCustomerY += 20;
+        currentCustomerY += 15; // Reduced from 20
         doc.text(`GST No: ${quotation.customer.gstNo}`, 40, currentCustomerY);
         console.log('GST number added to PDF at Y position:', currentCustomerY);
       } else {
@@ -826,7 +841,7 @@ const generateQuotationPDF = (quotation, filePath) => {
       }
 
       // Items table header (adjust position based on customer info)
-      const tableY = currentCustomerY + 40;
+      const tableY = currentCustomerY + 30; // Reduced from 40
       doc.fontSize(11)
          .font('Helvetica-Bold')
          .fillColor(primaryColor)
@@ -844,10 +859,35 @@ const generateQuotationPDF = (quotation, filePath) => {
          .opacity(1);
 
       // Items
-      let currentY = tableY + 35;
-      const rowHeight = 25;
+      let currentY = tableY + 30; // Reduced from 35
+      const rowHeight = 20; // Reduced from 25
 
       quotation.items.forEach((item, index) => {
+        // Check if we need a new page - leave space for totals and footer (120px - much more conservative)
+        if (currentY + rowHeight > doc.page.height - 120) {
+          doc.addPage();
+          currentY = 40;
+
+          // Redraw table header on new page
+          doc.fontSize(11)
+             .font('Helvetica-Bold')
+             .fillColor(primaryColor)
+             .text('PRODUCT', 40, currentY)
+             .text('UNIT TYPE', 250, currentY)
+             .text('QTY/MEASUREMENT', 350, currentY)
+             .text('AMOUNT', 480, currentY);
+
+          // Draw table header line
+          doc.strokeColor(primaryColor)
+             .opacity(0.5)
+             .moveTo(40, currentY + 20)
+             .lineTo(doc.page.width - 40, currentY + 20)
+             .stroke()
+             .opacity(1);
+
+          currentY += 35;
+        }
+
         doc.fontSize(10)
            .font('Helvetica')
            .fillColor(darkText);
@@ -894,7 +934,7 @@ const generateQuotationPDF = (quotation, filePath) => {
       });
 
       // Total section
-      const totalY = currentY + 20;
+      const totalY = currentY + 15; // Reduced from 20
       doc.strokeColor(primaryColor)
          .opacity(0.5)
          .moveTo(40, totalY)
@@ -908,7 +948,7 @@ const generateQuotationPDF = (quotation, filePath) => {
       const discount = parseFloat(quotation.discountAmount) || 0;
       const total = parseFloat(quotation.totalAmount) || 0;
 
-      let summaryY = totalY + 20;
+      let summaryY = totalY + 15; // Reduced from 20
 
       // Summary section with fixed positions for perfect alignment
       const labelX = 350;      // Fixed position for labels
@@ -921,14 +961,14 @@ const generateQuotationPDF = (quotation, filePath) => {
          .text('Subtotal:', labelX, summaryY, { width: 100, align: 'left' })
          .text(`Rs.${subtotal.toFixed(2)}`, amountX, summaryY, { width: 60, align: 'right' });
 
-      summaryY += 20;
+      summaryY += 15; // Reduced from 20
 
       // GST if applicable
       if (quotation.gstEnabled && gstAmount > 0) {
         doc.fillColor(darkText)
            .text(`GST (${quotation.gstPercentage}% ${quotation.gstType}):`, labelX, summaryY, { width: 100, align: 'left' })
            .text(`Rs.${gstAmount.toFixed(2)}`, amountX, summaryY, { width: 60, align: 'right' });
-        summaryY += 20;
+        summaryY += 15; // Reduced from 20
       }
 
       // Discount if applicable
@@ -936,18 +976,18 @@ const generateQuotationPDF = (quotation, filePath) => {
         doc.fillColor('#e74c3c')
            .text('Discount:', labelX, summaryY, { width: 100, align: 'left' })
            .text(`-Rs.${discount.toFixed(2)}`, amountX, summaryY, { width: 60, align: 'right' });
-        summaryY += 20;
+        summaryY += 15; // Reduced from 20
       }
 
       // Add separator line
-      summaryY += 5;
+      summaryY += 3; // Reduced from 5
       doc.strokeColor('#cccccc')
          .lineWidth(1)
          .moveTo(labelX, summaryY)
          .lineTo(amountX + 60, summaryY)
          .stroke();
 
-      summaryY += 15;
+      summaryY += 10; // Reduced from 15
 
       // Total Amount
       doc.fontSize(13)
@@ -956,8 +996,8 @@ const generateQuotationPDF = (quotation, filePath) => {
          .text('Total Amount:', labelX, summaryY, { width: 100, align: 'left' })
          .text(`Rs.${total.toFixed(2)}`, amountX, summaryY, { width: 60, align: 'right' });
 
-      // Terms and conditions
-      const termsY = summaryY + 40;
+      // Terms and conditions - more compact spacing
+      const termsY = summaryY + 20; // Reduced from 30
       doc.fontSize(11)
          .font('Helvetica-Bold')
          .fillColor(primaryColor)
@@ -966,31 +1006,38 @@ const generateQuotationPDF = (quotation, filePath) => {
       doc.fontSize(9)
          .font('Helvetica')
          .fillColor(darkText)
-         .text('• This quotation is valid until the date mentioned above.', 40, termsY + 20)
-         .text('• Prices are subject to change without prior notice.', 40, termsY + 35)
-         .text('• All payments should be made as per agreed terms.', 40, termsY + 50)
-         .text('• Material delivery charges may apply separately.', 40, termsY + 65);
+         .text('• This quotation is valid until the date mentioned above.', 40, termsY + 12) // Further reduced spacing
+         .text('• Prices are subject to change without prior notice.', 40, termsY + 24)
+         .text('• All payments should be made as per agreed terms.', 40, termsY + 36)
+         .text('• Material delivery charges may apply separately.', 40, termsY + 48);
 
-      // Footer section - ensure it's below terms
-      const footerY = Math.max(termsY + 100, doc.page.height - 80);
+      // Calculate footer position more conservatively to avoid extra pages
+      const contentEndY = termsY + 60; // End of terms section (further reduced)
+      const availableSpace = doc.page.height - contentEndY - 40; // Space remaining on page
 
-      // Separator line
-      doc.strokeColor(primaryColor)
-         .opacity(0.3)
-         .moveTo(40, footerY - 10)
-         .lineTo(doc.page.width - 40, footerY - 10)
-         .stroke()
-         .opacity(1);
+      // Only add footer if there's enough space
+      let footerY = contentEndY + 10; // Further reduced spacing
 
-      // Contact information
-      doc.fillColor(secondaryColor)
-         .fontSize(10)
-         .font('Helvetica')
-         .text('Kushi Decorators', 160, footerY + 5)
-         .text('|', 240, footerY + 5)
-         .text('Phone: +91 9724066417', 260, footerY + 5)
-         .text('|', 420, footerY + 5)
-         .text('Email: info@kushitrader.com', 440, footerY + 5);
+      // Only add footer elements if there's enough space to avoid extra pages
+      if (availableSpace >= 40) {
+        // Separator line
+        doc.strokeColor(primaryColor)
+           .opacity(0.3)
+           .moveTo(40, footerY)
+           .lineTo(doc.page.width - 40, footerY)
+           .stroke()
+           .opacity(1);
+
+        // Contact information
+        doc.fillColor(secondaryColor)
+           .fontSize(10)
+           .font('Helvetica')
+           .text('Kushi Decorators', 160, footerY + 20)
+           .text('|', 240, footerY + 20)
+           .text('Phone: +91 9724066417', 260, footerY + 20)
+           .text('|', 420, footerY + 20)
+           .text('Email: info@kushitrader.com', 440, footerY + 20);
+      }
 
       // Finalize the PDF
       doc.end();
@@ -1483,17 +1530,17 @@ async function generateQuotation2PDF(quotation) {
         const taxAmount = (afterDiscount * item.taxPercent) / 100;
         const finalAmount = afterDiscount + taxAmount;
 
-        // Check if we need a new page
-        if (itemY > 700) {
-          doc.addPage();
-          itemY = 40;
-        }
-
         // Calculate row height based on description length
         const descriptionText = item.description || '-';
         const descriptionWidth = 170; // Width available for description column
         const descriptionLines = Math.ceil(descriptionText.length / 25); // More realistic characters per line
         const rowHeight = Math.max(30, descriptionLines * 15 + 15); // Better spacing for readability
+
+        // Check if we need a new page - more conservative to avoid unnecessary page breaks
+        if (itemY + rowHeight > doc.page.height - 100) { // Leave 100px margin for footer
+          doc.addPage();
+          itemY = 40;
+        }
 
         // Draw row background (alternating colors)
         if (index % 2 === 1) {
@@ -1589,37 +1636,39 @@ async function generateQuotation2PDF(quotation) {
          .fillColor(primaryColor)
          .text(`Total Amount: Rs ${quotation.totalAmount.toFixed(2)}`, totalsX, itemY);
 
-      // Notes section
+      // Notes section - more compact spacing
       if (quotation.notes && quotation.notes.trim() !== '') {
-        itemY += 50;
+        itemY += 30; // Reduced from 50
         doc.fontSize(12)
            .font('Helvetica-Bold')
            .fillColor(primaryColor)
            .text('Notes:', 40, itemY);
-        itemY += 20;
+        itemY += 15; // Reduced from 20
         doc.fontSize(10)
            .font('Helvetica')
            .fillColor(darkText)
            .text(quotation.notes, 40, itemY, { width: 400 });
+        itemY += 25; // Add space after notes
       }
 
-      // Terms and Conditions
-      itemY += 50;
+      // Terms and Conditions - more compact spacing
+      itemY += 30; // Reduced from 50
       doc.fontSize(12)
          .font('Helvetica-Bold')
          .fillColor(primaryColor)
          .text('Terms & Conditions:', 40, itemY);
-      itemY += 20;
+      itemY += 15; // Reduced from 20
       doc.fontSize(10)
          .font('Helvetica')
          .fillColor(darkText)
          .text('Thank you for your business! Sold products cannot be returned.', 40, itemY, { width: 400 });
 
-      // Signature Section
-      itemY += 60;
+      // Signature Section - more compact spacing
+      itemY += 40; // Reduced from 60
 
-      // Check if we need a new page for signatures
-      if (itemY > doc.page.height - 150) {
+      // Check if we need a new page for signatures - only if absolutely necessary
+      const signatureSpaceNeeded = 140; // Space needed for signature boxes + labels
+      if (itemY + signatureSpaceNeeded > doc.page.height - 40) { // Reduced margin
         doc.addPage();
         itemY = 40;
       }
@@ -1663,10 +1712,16 @@ async function generateQuotation2PDF(quotation) {
          .text('Client Signature', rightSignatureX, signatureY + signatureHeight + 30)
          .text('Date: _______________', rightSignatureX, signatureY + signatureHeight + 45);
 
-      // Footer
-      doc.fontSize(8)
-         .fillColor(secondaryColor)
-         .text('This is a computer generated quotation.', 40, doc.page.height - 60, { align: 'center' });
+      // Footer - position dynamically based on content
+      const footerY = signatureY + signatureHeight + 65; // Position after signature content
+      const availableSpace = doc.page.height - footerY - 20; // Space remaining
+
+      // Only add footer if there's space, otherwise it will fit naturally
+      if (availableSpace >= 20) {
+        doc.fontSize(8)
+           .fillColor(secondaryColor)
+           .text('This is a computer generated quotation.', 40, footerY, { align: 'center' });
+      }
 
       doc.end();
     } catch (error) {
